@@ -1,0 +1,4 @@
+include ':app'
+include ':EventInjectCompiler', ':EventAnnotation'
+include ':launcher-compiler',':launcher-joke'
+rootProject.name='EventInject'
