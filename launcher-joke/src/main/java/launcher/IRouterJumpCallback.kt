@@ -1,5 +1,5 @@
-package launcher;
+package launcher
 
-public interface IRouterJumpCallback {
-    Object callback(Object callbackParam);
+fun interface IRouterJumpCallback {
+    fun callback(callbackParam: Any?): Any?
 }

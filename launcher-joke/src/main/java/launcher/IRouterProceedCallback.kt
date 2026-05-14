@@ -1,5 +1,5 @@
-package launcher;
+package launcher
 
-public interface IRouterProceedCallback {
-    void proceed(boolean result);
+fun interface IRouterProceedCallback {
+    fun proceed(result: Boolean)
 }
