@@ -1,0 +1,57 @@
+import org.gradle.internal.jvm.Jvm
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+dependencies {
+    annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+    implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
+    implementation project(':launcher-joke')
+    implementation 'com.squareup:javapoet:1.13.0'
+    implementation 'com.google.auto:auto-common:1.2.2'
+    compileOnly files("./libs/tools.jar")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    // 添加增量编译支持
+    implementation 'net.ltgt.gradle.incap:incap:1.0.0'
+    annotationProcessor 'net.ltgt.gradle.incap:incap-processor:1.0.0'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+    }
+}
+
+
+// 配置Java编译选项
+tasks.withType(JavaCompile) {
+    options.incremental = true // 启用Java编译器的增量编译
+    options.fork = true // 启用独立的编译器进程
+    options.forkOptions.jvmArgs << '-Xbootclasspath/p:' // 设置编译器的启动类路径，用于加载tools.jar等编译工具
+
+    // 添加编译优化参数
+    options.compilerArgs += [
+            "-Aincremental=true",  // 启用注解处理器的增量编译
+            "-Xlint:unchecked", // 启用未检查的类型转换警告
+            "-Xlint:deprecation" // 启用使用已废弃API的警告
+    ]
+
+    // 设置注解处理器的类路径
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs += [
+            // 设置注解处理器的搜索路径
+            "-processorpath", configurations.annotationProcessor.asPath,
+            // 指定要使用的注解处理器，多个处理器用逗号分隔
+            "-processor", "com.google.auto.service.processor.AutoServiceProcessor,launcher.ActivityLauncherProcessor",
+            // 启用注解处理器的增量编译
+            "-Aincremental.apt=true",
+            // 启用注解处理器的聚合模式
+            "-Aincremental.apt.aggregation=true",
+            // 启用注解处理器的隔离模式
+            "-Aincremental.apt.isolating=true"
+    ]
+}

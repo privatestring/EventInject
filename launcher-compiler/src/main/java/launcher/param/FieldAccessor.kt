@@ -1,6 +1,7 @@
 package launcher.param
 
 import launcher.error.Errors
+import java.util.Locale
 import javax.lang.model.element.Element
 import javax.lang.model.element.Modifier.PRIVATE
 import javax.lang.model.element.TypeElement
@@ -15,23 +16,23 @@ class FieldAccessor(element: Element) {
 
     fun isAccessible() = setterType != FieldAccessType.Inaccessible && getterType != FieldAccessType.Inaccessible
 
-    fun setToField(whatToSet: String): String? = when (setterType) {
+    fun setToField(whatToSet: String): String = when (setterType) {
         FieldAccessType.Accessible -> "$fieldName = $whatToSet"
-        FieldAccessType.ByMethod -> "set${fieldName.capitalize()}($whatToSet)"
+        FieldAccessType.ByMethod -> "set${fieldName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}($whatToSet)"
         FieldAccessType.ByNoIsMethod -> "set${fieldName.substring(2)}($whatToSet)"
         FieldAccessType.Inaccessible -> throw Error(Errors.noSetter)
     }
 
     fun getFieldValue(): String? = when (setterType) {
         FieldAccessType.Accessible -> fieldName
-        FieldAccessType.ByMethod -> "get${fieldName.capitalize()}()"
+        FieldAccessType.ByMethod -> "get${fieldName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}()"
         FieldAccessType.ByNoIsMethod -> "is${fieldName.substring(2)}()"
         FieldAccessType.Inaccessible -> throw Error(Errors.noSetter)
     }
 
     private fun getFieldAccessType(element: Element, functionModifier: String, isFunctionModifier: String) = when {
         PRIVATE !in element.modifiers -> FieldAccessType.Accessible
-        hasNotPrivateMethodNamed(enclosingElement, functionModifier + fieldName.capitalize()) -> FieldAccessType.ByMethod
+        hasNotPrivateMethodNamed(enclosingElement, functionModifier + fieldName.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }) -> FieldAccessType.ByMethod
         fieldName.substring(0, 2) == "is" && hasNotPrivateMethodNamed(enclosingElement, isFunctionModifier + fieldName.substring(2)) -> FieldAccessType.ByNoIsMethod
         else -> FieldAccessType.Inaccessible
     }

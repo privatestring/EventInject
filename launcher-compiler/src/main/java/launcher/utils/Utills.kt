@@ -14,6 +14,12 @@ val BUNDLE = ClassName.get("android.os", "Bundle")
 val CONTEXT = ClassName.get("android.content", "Context")
 val ACTIVITY = ClassName.get("android.app", "Activity")
 val STRING = ClassName.get("java.lang", "String")
+val STRINGBUILDER = ClassName.get("java.lang", "StringBuilder")
+val CLAZZ = ClassName.get("java.lang", "Class")
+val VIEW = ClassName.get("android.view", "View")
+
+val NULLABLE = ClassName.get("androidx.annotation", "Nullable")
+val NOTNULL = ClassName.get("androidx.annotation", "NonNull")
 
 val CLASS_NAME_END: String = "Launcher"
 val FIELD_NAME_END: String = "IntentKey"
@@ -39,18 +45,18 @@ fun TypeName.checkNotBox(): Boolean {
             || this == TypeName.DOUBLE
 }
 
-inline fun MethodSpec.Builder.doIf(check: Boolean, f: MethodSpec.Builder.() -> Unit) = apply {
+internal inline fun MethodSpec.Builder.doIf(check: Boolean, f: MethodSpec.Builder.() -> Unit) = apply {
     if (check) f()
 }
 
-inline fun TypeSpec.Builder.doIf(check: Boolean, f: TypeSpec.Builder.() -> Unit) = apply {
+internal inline fun TypeSpec.Builder.doIf(check: Boolean, f: TypeSpec.Builder.() -> Unit) = apply {
     if (check) f()
 }
 
-fun <T> List<T>.addIf(condition: Boolean, vararg e: T): List<T> {
+internal fun <T> List<T>.addIf(condition: Boolean, vararg e: T): List<T> {
     return if (condition) this + listOf(*e) else this
 }
 
-fun <T> List<T>.addIf(condition: Boolean, condition2: Boolean, vararg e: T): List<T> {
+internal fun <T> List<T>.addIf(condition: Boolean, condition2: Boolean, vararg e: T): List<T> {
     return if (condition && condition2) this + listOf(*e) else this
 }

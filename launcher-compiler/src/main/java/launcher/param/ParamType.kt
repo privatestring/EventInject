@@ -1,7 +1,7 @@
 package launcher.param
 
-import launcher.utils.isSubtypeOfType
 import com.squareup.javapoet.TypeName
+import launcher.utils.isSubtypeOfType
 import javax.lang.model.type.ArrayType
 import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeKind
@@ -44,10 +44,8 @@ enum class ParamType {
         val arrayListRegex by lazy { """ArrayList<([\w.]*)>""".toRegex() }
 
         fun fromType(typeMirror: TypeMirror): ParamType? =
-                getByKind(typeMirror) ?:
-                        getByName(typeMirror) ?:
-                        getArrayList(typeMirror) ?:
-                        getBySupertype(typeMirror)
+                getByKind(typeMirror) ?: getByName(typeMirror) ?: getArrayList(typeMirror)
+                ?: getBySupertype(typeMirror)
 
         private fun getByKind(typeMirror: TypeMirror): ParamType? = when (typeMirror.kind) {
             TypeKind.BOOLEAN -> Boolean
@@ -103,7 +101,7 @@ enum class ParamType {
 
         private fun TypeMirror.isArrayListWithSubtypesOf(supertype: kotlin.String): kotlin.Boolean {
             val typeAsString = toString()
-            if(!typeAsString.contains(arrayListRegex)) return false
+            if (!typeAsString.contains(arrayListRegex)) return false
             val elementsType = (this as? DeclaredType)?.typeArguments?.get(0) ?: return false
             return elementsType.isSubtypeOfType(supertype)
         }
@@ -113,4 +111,11 @@ enum class ParamType {
             ParcelableSubtype,
             SerializableSubtype
     )
+
+    fun isPrimitive(): kotlin.Boolean {
+        return when (this) {
+            Int, Long, Float, Boolean, Double, Char, Byte, Short -> true
+            else -> false
+        }
+    }
 }

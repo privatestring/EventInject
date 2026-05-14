@@ -6,12 +6,14 @@ import javax.lang.model.type.TypeMirror
 enum class KnownClassType(vararg val typeString: String) {
     Activity(ACTIVITY_TYPE),
     Fragment(FRAGMENT_TYPE, FRAGMENTv4_TYPE),
-//    Service(SERVICE_TYPE),
-    BroadcastReceiver(BROADCAST_RECEIVER_TYPE);
+
+    //    Service(SERVICE_TYPE),
+    BroadcastReceiver(BROADCAST_RECEIVER_TYPE),
+    Model("");
 
     companion object {
-        fun getByType(elementType: TypeMirror): KnownClassType? = values()
-                .first { elementType.isSubtypeOfType(*it.typeString) }
+        fun getByType(elementType: TypeMirror): KnownClassType = values()
+            .firstOrNull { elementType.isSubtypeOfType(*it.typeString) } ?: Model
     }
 }
 

@@ -1,9 +1,8 @@
 package launcher.codegeneration
 
-import launcher.codegeneration.IntentBinding
-import launcher.param.ArgumentBinding
 import com.squareup.javapoet.MethodSpec
 import launcher.classbinding.ClassBinding
+import launcher.param.ArgumentBinding
 
 internal class BroadcastReceiverGeneration(classBinding: ClassBinding) : IntentBinding(classBinding) {
 

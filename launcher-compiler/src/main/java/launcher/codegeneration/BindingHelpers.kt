@@ -4,11 +4,11 @@ import com.google.auto.common.MoreElements.getPackage
 import com.squareup.javapoet.ClassName.get
 import launcher.param.ParamType
 import launcher.utils.CLASS_NAME_END
-
-fun getBindingClassName(enclosingElement: javax.lang.model.element.TypeElement): com.squareup.javapoet.ClassName {
+//获取生成Binding类名称
+fun getBindingClassName(enclosingElement: javax.lang.model.element.TypeElement,end:String = CLASS_NAME_END): com.squareup.javapoet.ClassName {
     val packageName = getPackage(enclosingElement).qualifiedName.toString()
     val className = enclosingElement.qualifiedName.toString().substring(packageName.length + 1)
-    return get(packageName, className + CLASS_NAME_END)
+    return get(packageName, className + end)
 }
 
 fun getBundleSetterFor(type: ParamType) = when (type) {
@@ -43,10 +43,10 @@ fun getBundleSetterFor(type: ParamType) = when (type) {
 fun getBundleGetter(bundleName: String, paramType: ParamType, typeName: com.squareup.javapoet.TypeName, keyName: String): String {
     val bundleGetterCall = getBundleGetterCall(paramType)
     val getArgumentValue = "$bundleName.$bundleGetterCall($keyName)"
-    return if(paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
+    return if (paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
 }
 
-private fun getBundleGetterCall(paramType: ParamType) = when (paramType) {
+fun getBundleGetterCall(paramType: ParamType) = when (paramType) {
     ParamType.String -> "getString"
     ParamType.Int -> "getInt"
     ParamType.Long -> "getLong"
@@ -75,7 +75,7 @@ private fun getBundleGetterCall(paramType: ParamType) = when (paramType) {
     ParamType.ParcelableArrayListSubtype -> "getParcelableArrayList"
 }
 
-fun getPutArgumentToIntentMethodName(paramType: ParamType) = when(paramType) {
+fun getPutArgumentToIntentMethodName(paramType: ParamType) = when (paramType) {
     ParamType.IntegerArrayList -> "putIntegerArrayListExtra"
     ParamType.CharSequenceArrayList -> "putCharSequenceArrayListExtra"
     ParamType.ParcelableArrayListSubtype -> "putParcelableArrayListExtra"
@@ -86,10 +86,10 @@ fun getPutArgumentToIntentMethodName(paramType: ParamType) = when(paramType) {
 fun getIntentGetterFor(paramType: ParamType, typeName: com.squareup.javapoet.TypeName, key: String): String {
     val getter = getIntentGetterForParamType(paramType, key)
     val getArgumentValue = "intent.$getter"
-    return if(paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
+    return if (paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
 }
 
-private fun getIntentGetterForParamType(paramType: ParamType, key: String) = when (paramType) {
+fun getIntentGetterForParamType(paramType: ParamType, key: String) = when (paramType) {
     ParamType.String -> "getStringExtra($key)"
     ParamType.Int -> "getIntExtra($key, 0)"
     ParamType.Long -> "getLongExtra($key, 0L)"

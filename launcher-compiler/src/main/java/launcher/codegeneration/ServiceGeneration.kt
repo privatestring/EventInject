@@ -1,8 +1,8 @@
 package launcher.codegeneration
 
-import launcher.param.ArgumentBinding
 import com.squareup.javapoet.MethodSpec
 import launcher.classbinding.ClassBinding
+import launcher.param.ArgumentBinding
 
 internal class ServiceGeneration(classBinding: ClassBinding) : IntentBinding(classBinding) {
 

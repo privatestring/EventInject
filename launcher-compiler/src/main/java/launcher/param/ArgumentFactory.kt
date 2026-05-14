@@ -1,9 +1,7 @@
 package launcher.param
 
 import com.squareup.javapoet.TypeName
-import com.sun.org.apache.xpath.internal.Arg
 import launcher.Boom
-import launcher.MulField
 import launcher.classbinding.KnownClassType
 import launcher.error.Errors
 import launcher.error.error
@@ -15,6 +13,9 @@ import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
 import javax.lang.model.type.TypeMirror
 
+/**
+ * 属性生成器
+ */
 class ArgumentFactory(val enclosingElement: TypeElement) {
 
     fun parseArgument(element: Element, packageName: String, knownClassType: KnownClassType): ArgumentBinding? {
@@ -27,13 +28,23 @@ class ArgumentFactory(val enclosingElement: TypeElement) {
         }
         paramType!!
         val name: String = element.simpleName.toString()
-        val keyFromAnnotation = element.getAnnotation(Boom::class.java)?.key
+        val boomAnnotation = element.getAnnotation(Boom::class.java)
+        val keyFromAnnotation = boomAnnotation?.key
         val defaultKey = "$packageName.${name}${FIELD_NAME_END}"
-        val key: String = if (keyFromAnnotation.isNullOrBlank()) defaultKey else keyFromAnnotation
+        val key: String = if (keyFromAnnotation.orEmpty().isNotEmpty()) keyFromAnnotation.orEmpty()
+        else if (boomAnnotation?.useFieldKey == true) name
+        else defaultKey
         val typeName: TypeName = TypeName.get(elementType)
-        val isOptional: Boolean = element.getAnnotation(MulField::class.java) != null
-        val accessor: FieldAccessor = FieldAccessor(element)
-        return ArgumentBinding(name, key, paramType, typeName, isOptional, accessor)
+        val isOptional: Boolean = boomAnnotation?.isOptional ?: false
+        val index = boomAnnotation?.index ?: 0
+        val accessor = FieldAccessor(element)
+        val annotationList = element.annotationMirrors.orEmpty().mapNotNull {
+            kotlin.runCatching {
+                it.annotationType.toString()
+            }.getOrNull()
+        }.filter { it != Boom::class.java.name  && it.contains("NotNull").not()}
+        val desc = boomAnnotation?.desc ?: ""
+        return ArgumentBinding(name, key, paramType, typeName, index, isOptional, accessor, annotationList,desc)
     }
 
     private fun getFieldError(element: Element, knownClassType: KnownClassType, paramTypeNullable: ParamType?) = when {
@@ -46,6 +57,6 @@ class ArgumentFactory(val enclosingElement: TypeElement) {
     }
 
     fun showProcessingError(element: Element, text: String) {
-        error(enclosingElement, "@%s %s $text (%s)", Arg::class.java.simpleName, enclosingElement.qualifiedName, element.simpleName)
+        error(enclosingElement, "@%s %s $text (%s)", "Arg", enclosingElement.qualifiedName, element.simpleName)
     }
 }

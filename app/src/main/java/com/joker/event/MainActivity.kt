@@ -5,28 +5,29 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.joker.annotation.EventBridge
 import com.joker.annotation.EventHandle
+import com.joker.event.databinding.ActivityMainBinding
 import com.mei.models.EventInjectImpl
-import kotlinx.android.synthetic.main.activity_main.*
 
-@EventBridge("haha://tab_selected","haha://xxx")
+@EventBridge("haha://tab_selected", "haha://xxx")
 class MainActivity : AppCompatActivity(), EventHandle {
 
+    private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(binding.root)
 
         val back: (String) -> Int = {
             Log.e("info-back", "$it: ");
             100
         }
-        main_post.setOnClickListener { v ->
+        binding.mainPost.setOnClickListener { v ->
 
             EventInjectImpl().postEventInject("haha://tab_selected", back)
         }
-        test1_post.setOnClickListener { v ->
+        binding.test1Post.setOnClickListener { v ->
             EventInjectImpl().postEventInject("haha://test1", Pair("xxxxx1", back))
         }
-        test2_post.setOnClickListener { v ->
+        binding.test2Post.setOnClickListener { v ->
             EventInjectImpl().postEventInject("haha://test2", Pair("xxxxx2", back))
         }
 

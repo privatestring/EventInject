@@ -3,13 +3,21 @@ package launcher.codegeneration
 import com.squareup.javapoet.MethodSpec
 import launcher.classbinding.ClassBinding
 import launcher.param.ArgumentBinding
-import launcher.utils.*
+import launcher.utils.ADD_INTENT_PARAMS
+import launcher.utils.GET_INTENT_METHOD
+import launcher.utils.INTENT
+import launcher.utils.START_METHOD_NAME
+import launcher.utils.checkNotBox
 
+/**
+ * 生成基类
+ */
 internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGeneration(classBinding) {
 
     protected fun fillByIntentBinding(targetName: String) = getBasicFillMethodBuilder("ActivityLauncher.bind(this, intent)")
             .addParameter(classBinding.targetTypeName, targetName)
             .addParameter(INTENT, "intent")
+            .addStatement("if(intent == null || $targetName == null) return")
             .addIntentSetters(targetName)
             .build()!!
 
@@ -32,16 +40,12 @@ internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGenerat
             .addStatement("return intent")
             .build()!!
 
-    private fun MethodSpec.Builder.addPutExtraStatement(variant: List<ArgumentBinding>) = apply {
+    protected fun MethodSpec.Builder.addPutExtraStatement(variant: List<ArgumentBinding>) = apply {
         variant.forEach { arg ->
             val putArgumentToIntentMethodName = getPutArgumentToIntentMethodName(arg.paramType)
-            val check = if (arg.typeName.checkNotBox()) " " else "if(${arg.name} != null) \n"
-//            val check = ""
-//            if (arg.typeName.checkNotBox()) {
-            addStatement(check + "intent.$putArgumentToIntentMethodName(" + arg.fieldName + ", " + arg.name + ")")
-//            } else {
-////                addStatement("if(${arg.name} != null) \n intent.$putArgumentToIntentMethodName(" + arg.fieldName + ", " + arg.name + ")")
-//            }
+            if (arg.typeName.checkNotBox().not()) beginControlFlow("if(${arg.name} != null)")
+            addStatement("intent.$putArgumentToIntentMethodName(" + arg.fieldName + ", " + arg.name + ");//${arg.paramType.name}")
+            if (arg.typeName.checkNotBox().not()) endControlFlow()
         }
     }
 
@@ -52,12 +56,22 @@ internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGenerat
 
     protected fun MethodSpec.Builder.addIntentSetter(arg: ArgumentBinding, targetParameterName: String) {
         val fieldName = arg.fieldName
-        val settingPart = arg.accessor.setToField(getIntentGetterFor(arg.paramType, arg.typeName, fieldName))
-        addStatement("if(intent.hasExtra($fieldName)) \n $targetParameterName.$settingPart")
+        val what = getIntentGetterFor(arg.paramType, arg.typeName, fieldName)
+        val settingPart = arg.accessor.setToField(what)
+        if (arg.typeName.checkNotBox()) {
+            beginControlFlow("if(intent.hasExtra($fieldName))")
+        } else {
+            val getter = getIntentGetterForParamType(arg.paramType, fieldName)
+            beginControlFlow("if(intent.hasExtra($fieldName) && intent.${getter} != null)")
+        }
+        addStatement("$targetParameterName.$settingPart")
+        endControlFlow()
     }
 
-    protected fun createGetIntentStarter(starterFunc: String, variant: List<ArgumentBinding>) = builderWithCreationBasicFields(START_METHOD_NAME)
+    protected fun createGetIntentStarter(starterFunc: String, variant: List<ArgumentBinding>) =
+        builderWithCreationBasicFields(START_METHOD_NAME)
             .addArgParameters(variant)
+            .addStatement("if(context == null) return")
             .addGetIntentStatement(variant)
             .addStatement("context.$starterFunc(intent)")
             .build()
