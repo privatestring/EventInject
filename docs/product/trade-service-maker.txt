@@ -1,0 +1,6 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@TradeServiceMaker 注解 → 注解参数指定 className + packageName
+
+base-component/CommonModule/src/main/java/com/webull/commonmodule/trade/service/ITradeManagerServiceMaker.kt
+base-component/CommonModule/build/generated/source/kapt/stocksDebug/com/webull/commonmodule/trade/service/ITradeManagerService.java

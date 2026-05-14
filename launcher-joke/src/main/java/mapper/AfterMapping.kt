@@ -1,13 +1,8 @@
-package mapper;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package mapper
 
 /**
  * 在映射完成后执行自定义逻辑的注解
- * 
+ *
  * 使用场景：
  * 1. 在字段映射完成后，需要执行额外的业务逻辑
  * 2. 需要根据映射结果进行条件判断和修改
@@ -39,8 +34,6 @@ import java.lang.annotation.Target;
  * - 方法返回类型必须是 void
  * - 可以有多个 @AfterMapping 方法，按定义顺序执行
  */
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.CLASS)
-public @interface AfterMapping {
-}
-
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class AfterMapping

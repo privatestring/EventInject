@@ -1,9 +1,6 @@
-package launcher;
+package launcher
 
-public @interface MarketViewRoute {
-
-    String key() default "";
-
-    String desc() default "";
-
-}
+annotation class MarketViewRoute(
+    val key: String = "",
+    val desc: String = ""
+)

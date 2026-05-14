@@ -1,13 +1,8 @@
-package mapper;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package mapper
 
 /**
  * 在映射开始前执行自定义逻辑的注解
- * 
+ *
  * 使用场景：
  * 1. 在字段映射开始前，需要预处理源数据
  * 2. 需要根据源数据设置目标对象的初始状态
@@ -39,8 +34,6 @@ import java.lang.annotation.Target;
  * - 方法返回类型必须是 void
  * - 可以有多个 @BeforeMapping 方法，按定义顺序执行
  */
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.CLASS)
-public @interface BeforeMapping {
-}
-
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class BeforeMapping

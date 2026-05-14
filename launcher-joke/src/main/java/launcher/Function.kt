@@ -1,10 +1,10 @@
-package launcher;
+package launcher
 
 /**
  * 功能地图 注解
  */
-public @interface Function {
-    String functionId() default "";
-    String desc();
-    String[] group() default {};
-}
+annotation class Function(
+    val functionId: String = "",
+    val desc: String,
+    val group: Array<String> = []
+)

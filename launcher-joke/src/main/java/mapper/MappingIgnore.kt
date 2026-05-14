@@ -1,13 +1,8 @@
-package mapper;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package mapper
 
 /**
  * 标记在 Mapper 接口的方法上，表示该方法不需要生成实现。
- * 
+ *
  * 这些方法通常用于编写 expression 语句中的实际业务代码，
  * 而不是用于对象映射。
  * 
@@ -26,8 +21,6 @@ import java.lang.annotation.Target;
  * }
  * </pre>
  */
-@Target(ElementType.METHOD)
-@Retention(RetentionPolicy.CLASS)
-public @interface MappingIgnore {
-}
-
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class MappingIgnore

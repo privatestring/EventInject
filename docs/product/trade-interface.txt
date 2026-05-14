@@ -1,0 +1,42 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@TradeInterface 注解 → TradeInterfaceFactory{ModuleName}.java（固定包名 com.webull.trade.services）
+源文件总数: 27, 生成文件总数: 7
+
+tradesdk/TradeAccount/src/subModules/account_agreement/code/com/webull/account/agreement/impl/AccountAgreementInnerInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_permission/code/com/webull/account/permission/impl/AccountPermissionInnerInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_permission/code/com/webull/account/permission/impl/TradeAccountPermissionInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/AccountInfoInnerInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/AccountInnerInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/AccountSimulatedInnerInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/TradeAccountAgreementInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/TradeAccountInfoInterfaceImpl.kt
+tradesdk/TradeAccount/src/subModules/account_service/code/com/webull/account/service/impl/TradeAccountInterfaceImpl.kt
+tradesdk/TradeAsset/src/main/code/com/webull/trade/asset/service/AssetInnerServiceImpl.kt
+tradesdk/TradeAsset/src/main/code/com/webull/trade/asset/share/TradeAssetInterfaceImpl.kt
+tradesdk/TradeCore/src/main/java/com/webull/library/base/TradeCoreInterfaceImpl.kt
+tradesdk/TradeGlobal/src/subModules/global_common/code/com/webull/global/common/ITradeGlobalInnerInterfaceImpl.kt
+tradesdk/TradeGlobal/src/subModules/global_common/code/com/webull/global/common/ITradeGlobalInterfaceImpl.kt
+tradesdk/TradeModule/src/main/java/com/webull/trade/services/TradeInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_common/code/com/webull/order/common/TradeOrderInnerInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_common/code/com/webull/order/common/TradeOrderInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_ipo/code/com/webull/order/ipo/TradeOrderIpoInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_place/code/com/webull/order/place/TradeOrderPlaceInnerInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_place/code/com/webull/order/place/TradeOrderPlaceInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_record/code/com/webull/order/record/TradeOrderRecordInnerInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_record/code/com/webull/order/record/TradeOrderRecordInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_record/code/com/webull/order/record/list/crypto/grid_v2/TradeOrderStrategyInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_recurring/code/com/webull/order/recurring/TradeOrderRecurringInterfaceImpl.kt
+tradesdk/TradeOrder/src/order_recurring/code/com/webull/order/recurring/TradeRecurringInnerInterfaceImpl.kt
+tradesdk/TradeWealth/src/subModules/wealth_common/code/com/webull/wealth/common/TradeWealthInnerInterfaceImpl.kt
+tradesdk/TradeWealth/src/subModules/wealth_common/code/com/webull/wealth/common/TradeWealthInterfaceImpl.kt
+
+--- 生成文件 ---
+
+tradesdk/TradeAccount/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeAccount.java
+tradesdk/TradeAsset/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeAsset.java
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeCore.java
+tradesdk/TradeGlobal/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeGlobal.java
+tradesdk/TradeModule/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeModule.java
+tradesdk/TradeOrder/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeOrder.java
+tradesdk/TradeWealth/build/generated/source/kapt/stocksDebug/com/webull/trade/services/TradeInterfaceFactoryTradeWealth.java

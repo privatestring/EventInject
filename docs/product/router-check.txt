@@ -1,0 +1,35 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@RouterCheck 注解（影响 Router(_XXXxxx)：添加路由检查器链）
+源文件总数: 10
+
+component/marketsdk/Crypto/src/main/code/com/webull/market/crypto/router/CryptoHomeContainerFragment.kt
+component/marketsdk/Crypto/build/generated/source/kapt/stocksDebug/com/webull/market/crypto/router/CryptoHomeContainerFragment_XXXxxx.java
+
+component/phone/GlobalModule/src/ai/ai_webot/code/com/webull/ai/webot/AiWeBotActivity.kt
+component/phone/GlobalModule/build/generated/source/kapt/stocksDebug/com/webull/ai/webot/AiWeBotActivity_XXXxxx.java
+
+component/phone/GlobalModule/src/ai/ai_webot/code_vega/com/webull/ai/vega/analyst/VegaAnalystActivity.kt
+component/phone/GlobalModule/build/generated/source/kapt/stocksDebug/com/webull/ai/vega/analyst/VegaAnalystActivity_XXXxxx.java
+
+component/phone/GlobalModule/src/ai/ai_webot/code_vega/com/webull/ai/vega/fragment/AiTickerVegaAnalystFragment.kt
+component/phone/GlobalModule/build/generated/source/kapt/stocksDebug/com/webull/ai/vega/fragment/AiTickerVegaAnalystFragment_XXXxxx.java
+
+component/tickersdk/TickerChart/src/chartFull/page/chart_page/code/com/webull/chart/page/TickerFullChartActivity.kt
+component/tickersdk/TickerChart/build/generated/source/kapt/stocksDebug/com/webull/chart/page/TickerFullChartActivity_XXXxxx.java
+
+component/tickersdk/TickerOption/src/option/optionTab/code/com/webull/ticker/detailsub/activity/option/setting/OptionSettingFragment.java
+# 未找到对应 _XXXxxx 文件
+
+tradesdk/TradeAsset/src/main/code/com/webull/trade/asset/banking/wp_crypto/coin_transfer/coinin/WpCryptoCoinInActivity.kt
+tradesdk/TradeAsset/build/generated/source/kapt/stocksDebug/com/webull/trade/asset/banking/wp_crypto/coin_transfer/coinin/WpCryptoCoinInActivity_XXXxxx.java
+
+tradesdk/TradeAsset/src/main/code/com/webull/trade/asset/banking/wp_crypto/coin_transfer/coinout/WpCryptoCoinOutActivity.kt
+tradesdk/TradeAsset/build/generated/source/kapt/stocksDebug/com/webull/trade/asset/banking/wp_crypto/coin_transfer/coinout/WpCryptoCoinOutActivity_XXXxxx.java
+
+tradesdk/TradeAsset/src/main/code/com/webull/trade/asset/banking/wp_crypto/coin_transfer/detail/CoinOrderDetailFragment.kt
+tradesdk/TradeAsset/build/generated/source/kapt/stocksDebug/com/webull/trade/asset/banking/wp_crypto/coin_transfer/detail/CoinOrderDetailFragment_XXXxxx.java
+
+tradesdk/TradeCore/src/main/java/com/webull/library/trade/simulated/rank/SimulatedHotTradeDetailFragment.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/library/trade/simulated/rank/SimulatedHotTradeDetailFragment_XXXxxx.java
+

@@ -1,0 +1,26 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@MarketViewRoute 注解 → MarketViewRouteFactory.java（固定包名 com.webull.market.common.base）
+源文件总数: 17
+
+component/phone/MarketModule/src/market_category/market_bond/code_bond_filter/com/webull/market/bond/filter/card/BondFilterCardCommonView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/bond_calc/BondCalcCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/chart/view/BondTrdChartLayout.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/learns/BondLearnCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/news/BondNewsCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/popular_companies_card/BondPopularCompaniesCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/rank_card_corporate/CorporateTabRankCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing/com/webull/market/bond/index/rank_tab_card/BondTabRankCardView.kt
+component/phone/MarketModule/src/market_category/market_bond/code_bond_landing_sg/com/webull/market/bond/index/filter_card/BondFilterCardView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingBallLCardListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingBallListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingCardListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingCryptoTabView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingGroupListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingItemListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_landing_event_layout/com/webull/market/event/trade/child_view/EventLandingSmallIconItemListView.kt
+component/phone/MarketModule/src/market_category/market_event_trade/code_menu_function/com/webull/market/event/trade/menu/EventLandingFunctionListViewV12.kt
+
+--- 生成文件 ---
+
+component/phone/MarketModule/build/generated/source/kapt/stocksDebug/com/webull/market/common/base/MarketViewRouteFactory.java

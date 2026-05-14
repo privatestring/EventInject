@@ -1,0 +1,26 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@ParentCls 注解（影响 Launcher：生成 addBundleParams 而非 newInstance）
+源文件总数: 7
+
+tradesdk/TradeCore/src/main/java/com/webull/library/broker/webull/option/dialog/OptionPreviewAndSwitchDialogFragment.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/library/broker/webull/option/dialog/OptionPreviewAndSwitchDialogFragmentLauncher.java
+
+tradesdk/TradeCore/src/order/order_place/code_lite/com/webull/order/place/normal/core/option/preview/LiteOptionPreviewAndSwitchDialogFragment.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/order/place/normal/core/option/preview/LiteOptionPreviewAndSwitchDialogFragmentLauncher.java
+
+tradesdk/TradeCore/src/subModules/lite_deposit/code/com/webull/lite/deposit/ui/deposit/LiteDepositContainerActivity.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/lite/deposit/ui/deposit/LiteDepositContainerActivityLauncher.java
+
+tradesdk/TradeCore/src/subModules/lite_deposit/code/com/webull/lite/deposit/ui/dialog/data/RobotAdvisorWithdrawViewModel.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/lite/deposit/ui/dialog/data/RobotAdvisorWithdrawViewModelLauncher.java
+
+tradesdk/TradeCore/src/subModules/lite_deposit/code/com/webull/lite/deposit/ui/withdraw/LiteWithdrawContainerActivity.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/lite/deposit/ui/withdraw/LiteWithdrawContainerActivityLauncher.java
+
+tradesdk/TradeWealth/src/subModules/wealth_fund/code/com/webull/wealth/fund/wbhk/order/FundPlaceOrderFragment.kt
+tradesdk/TradeWealth/build/generated/source/kapt/stocksDebug/com/webull/wealth/fund/wbhk/order/FundPlaceOrderFragmentLauncher.java
+
+tradesdk/TradeWealth/src/subModules/wealth_fund/code/com/webull/wealth/fund/wbhk/order/confirm/FundOrderConfirmDialog.kt
+tradesdk/TradeWealth/build/generated/source/kapt/stocksDebug/com/webull/wealth/fund/wbhk/order/confirm/FundOrderConfirmDialogLauncher.java
+

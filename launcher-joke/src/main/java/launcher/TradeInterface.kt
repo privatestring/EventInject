@@ -1,28 +1,22 @@
-package launcher;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package launcher
 
 /**
  * 用于标记Trade接口的实现类
  * 注解处理器会在编译时收集所有标记此注解的类，并自动生成TradeInterfaceFactory
- * 
+ *
  * 使用示例:
- * @TradeService(ITradeAccountInterface.class)
- * public class TradeAccountInterfaceImpl implements ITradeAccountInterface { ... }
+ * @TradeInterface(ITradeAccountInterface::class)
+ * class TradeAccountInterfaceImpl : ITradeAccountInterface { ... }
  */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
-public @interface TradeInterface {
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class TradeInterface(
     /**
      * 接口类型，实现类需要实现此接口
      */
-    Class<?> value();
-    
+    val value: kotlin.reflect.KClass<*>,
     /**
      * 是否为内部接口
      */
-    boolean isInner() default false;
-} 
+    val isInner: Boolean = false
+)

@@ -1,9 +1,4 @@
-package mapper;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package mapper
 
 /**
  * 该注解，用于自动生成实体类更新/转换代码，使用时需添加到描述接口类上
@@ -16,23 +11,19 @@ import java.lang.annotation.Target;
  * 2、业务逻辑较重的转换代码，条件判断较多，且包含复杂业务
  * 3、原实体类转换代码，使用场景有限，非通用场景。只是在一些特殊场景下，仅需要个别字段的转换，而非全部转换
  */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.CLASS)
-public @interface Mapper {
-
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class Mapper(
     /**
      * 预留兼容属性，当前实现仅做占位。
      */
-    Class<?>[] uses() default {};
-
+    val uses: Array<kotlin.reflect.KClass<*>> = [],
     /**
      * 组件模型名称，当前实现不做特殊处理，保留语义兼容。
      */
-    String componentModel() default "";
-
+    val componentModel: String = "",
     /**
-     * 生成实现类使用的后缀，默认 {@code Impl}。
+     * 生成实现类使用的后缀，默认 Impl。
      */
-    String implementationSuffix() default "Impl";
-}
-
+    val implementationSuffix: String = "Impl"
+)

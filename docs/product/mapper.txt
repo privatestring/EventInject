@@ -1,0 +1,20 @@
+项目路径: /Users/joker/webull/git/AppDev3
+
+@Mapper 注解 → {InterfaceName}Impl.java（与 Mapper 接口同包）
+生成文件总数: 5
+
+tradesdk/TradeCore/src/common/trade_bean/code/com/webull/trade/bean/asset/position/option/OptionPositionMapper.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/bean/asset/position/option/OptionPositionMapperImpl.java
+
+tradesdk/TradeCore/src/common/trade_bean/code/com/webull/trade/bean/common/realtime/KBusQuoteMapper.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/bean/common/realtime/KBusQuoteMapperImpl.java
+
+tradesdk/TradeCore/src/common/trade_bean/code/com/webull/trade/bean/common/realtime/option/TickerOptionBeanMapper.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/bean/common/realtime/option/TickerOptionBeanMapperImpl.java
+
+tradesdk/TradeCore/src/common/trade_bean/code/com/webull/trade/bean/order/option/OptionOrderMapper.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/bean/order/option/OptionOrderMapperImpl.java
+
+tradesdk/TradeCore/src/common/trade_bean/code/com/webull/trade/bean/order/stock/StockOrderMapper.kt
+tradesdk/TradeCore/build/generated/source/kapt/stocksDebug/com/webull/trade/bean/order/stock/StockOrderMapperImpl.java
+
