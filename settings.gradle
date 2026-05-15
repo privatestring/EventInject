@@ -1,4 +1,4 @@
 include ':app'
 include ':EventInjectCompiler', ':EventAnnotation'
-include ':launcher-compiler',':launcher-compiler-ksp',':launcher-wb-compiler-ksp',':launcher-joke'
+include ':launcher-compiler',':launcher-compiler-ksp',':launcher-compiler-wb-ksp',':launcher-joke'
 rootProject.name='EventInject'

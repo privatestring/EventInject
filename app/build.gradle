@@ -44,11 +44,12 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.core:core-ktx:1.18.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
 
     implementation project(':EventAnnotation')
     ksp project(':EventInjectCompiler')
 
     implementation project(':launcher-joke')
     ksp project(':launcher-compiler-ksp')
-    ksp project(':launcher-wb-compiler-ksp')
+    ksp project(':launcher-compiler-wb-ksp')
 }
