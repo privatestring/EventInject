@@ -9,6 +9,7 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Modifier
+import com.google.devtools.ksp.symbol.Origin
 
 /**
  * 佛祖保佑         永无BUG
@@ -32,12 +33,13 @@ class PropertyResolver(private val logger: KSPLogger) {
     private val writableFieldsCache = mutableMapOf<String, Map<String, WritableField>>()
 
     /**
-     * 可读属性（通过 getter 方法访问）
+     * 可读属性（通过 getter 方法或字段直接访问）
      */
     data class ReadableProperty(
         val name: String,
         val getterName: String,
-        val type: KSType
+        val type: KSType,
+        val isFieldAccess: Boolean = false
     )
 
     /**
@@ -108,7 +110,8 @@ class PropertyResolver(private val logger: KSPLogger) {
     private fun collectReadable(type: KSClassDeclaration): Map<String, ReadableProperty> {
         val map = linkedMapOf<String, ReadableProperty>()
 
-        // 收集所有 getter 方法（包括继承的）
+        // 收集所有显式定义的 getter 方法（包括继承的）
+        val explicitGetters = mutableSetOf<String>()
         getAllFunctions(type).forEach { function ->
             val name = function.simpleName.asString()
             val params = function.parameters
@@ -130,17 +133,28 @@ class PropertyResolver(private val logger: KSPLogger) {
                 // getXxx 优先于 isXxx
                 if (!map.containsKey(property) || !name.startsWith("is")) {
                     map[property] = ReadableProperty(property, name, returnType)
+                    explicitGetters += property
                 }
             }
         }
 
-        // 对于 Kotlin 类，也收集 public 属性（它们可能没有显式的 getXxx 方法）
+        // 对于 Kotlin 源文件的类，收集 public 属性（它们有隐式 getter）
+        // 对于 Java 源文件的类，public 字段没有显式 getter 时用字段直接访问
         getAllProperties(type).forEach { prop ->
             val propName = prop.simpleName.asString()
-            if (!map.containsKey(propName) && !prop.modifiers.contains(Modifier.PRIVATE)) {
-                val propType = prop.type.resolve()
-                // Kotlin 属性的 getter 名称：getXxx() 或 isXxx()（Boolean）
-                val getterName = if (propType.declaration.qualifiedName?.asString() == "kotlin.Boolean") {
+            if (map.containsKey(propName)) return@forEach
+            if (prop.modifiers.contains(Modifier.PRIVATE)) return@forEach
+
+            val propType = prop.type.resolve()
+
+            // 判断属性来源
+            val isFromJava = prop.origin == Origin.JAVA || prop.origin == Origin.JAVA_LIB
+            if (isFromJava && !explicitGetters.contains(propName)) {
+                // Java public 字段没有显式 getter，用字段名直接访问
+                map[propName] = ReadableProperty(propName, propName, propType, isFieldAccess = true)
+            } else if (!isFromJava) {
+                // Kotlin 属性有隐式 getter，检查 @JvmName 注解
+                val getterName = resolveGetterJvmName(prop) ?: if (propType.declaration.qualifiedName?.asString() == "kotlin.Boolean") {
                     "is${cap(propName)}"
                 } else {
                     "get${cap(propName)}"
@@ -155,7 +169,8 @@ class PropertyResolver(private val logger: KSPLogger) {
     private fun collectWritable(type: KSClassDeclaration): Map<String, WritableProperty> {
         val map = linkedMapOf<String, WritableProperty>()
 
-        // 收集所有 setter 方法（包括继承的）
+        // 收集所有显式定义的 setter 方法（包括继承的）
+        val explicitSetters = mutableSetOf<String>()
         getAllFunctions(type).forEach { function ->
             val name = function.simpleName.asString()
             val params = function.parameters
@@ -170,16 +185,28 @@ class PropertyResolver(private val logger: KSPLogger) {
             val property = decap(name.substring(3))
             val paramType = params.first().type.resolve()
             map[property] = WritableProperty(property, name, paramType)
+            explicitSetters += property
         }
 
-        // 对于 Kotlin 类，也收集 var 属性（它们有隐式 setter）
+        // 对于 Kotlin 源文件的类，收集 var 属性（它们有隐式 setter）
+        // 对于 Java 源文件的类，public 字段不应该走 setter 路径（应走 field 直接赋值）
         getAllProperties(type).forEach { prop ->
             val propName = prop.simpleName.asString()
-            if (!map.containsKey(propName) && prop.isMutable && !prop.modifiers.contains(Modifier.PRIVATE)) {
-                val propType = prop.type.resolve()
-                val setterName = "set${cap(propName)}"
-                map[propName] = WritableProperty(propName, setterName, propType)
+            if (map.containsKey(propName)) return@forEach
+            if (!prop.isMutable) return@forEach
+            if (prop.modifiers.contains(Modifier.PRIVATE)) return@forEach
+
+            // 判断属性来源：如果属性来自 Java 源文件且没有显式 setter，跳过（留给 writableFields）
+            val isFromJava = prop.origin == Origin.JAVA || prop.origin == Origin.JAVA_LIB
+            if (isFromJava && !explicitSetters.contains(propName)) {
+                // Java public 字段没有显式 setter，不收集到 writeableProperties
+                return@forEach
             }
+
+            val propType = prop.type.resolve()
+            // Kotlin 属性检查 @JvmName 注解
+            val setterName = resolveSetterJvmName(prop) ?: "set${cap(propName)}"
+            map[propName] = WritableProperty(propName, setterName, propType)
         }
 
         return map
@@ -216,6 +243,48 @@ class PropertyResolver(private val logger: KSPLogger) {
      */
     private fun getAllProperties(type: KSClassDeclaration): Sequence<KSPropertyDeclaration> {
         return type.getAllProperties()
+    }
+
+    /**
+     * 解析 Kotlin 属性 getter 上的 @JvmName 注解值
+     */
+    private fun resolveGetterJvmName(prop: KSPropertyDeclaration): String? {
+        // 检查属性 getter 上的 @JvmName
+        prop.getter?.annotations?.forEach { anno ->
+            if (anno.shortName.asString() == "JvmName") {
+                val name = anno.arguments.firstOrNull { it.name?.asString() == "name" }?.value as? String
+                if (!name.isNullOrBlank()) return name
+            }
+        }
+        // 检查属性本身的 @get:JvmName（KSP 中可能直接在属性注解上）
+        prop.annotations.forEach { anno ->
+            if (anno.shortName.asString() == "JvmName" && anno.useSiteTarget?.name == "GET") {
+                val name = anno.arguments.firstOrNull { it.name?.asString() == "name" }?.value as? String
+                if (!name.isNullOrBlank()) return name
+            }
+        }
+        return null
+    }
+
+    /**
+     * 解析 Kotlin 属性 setter 上的 @JvmName 注解值
+     */
+    private fun resolveSetterJvmName(prop: KSPropertyDeclaration): String? {
+        // 检查属性 setter 上的 @JvmName
+        prop.setter?.annotations?.forEach { anno ->
+            if (anno.shortName.asString() == "JvmName") {
+                val name = anno.arguments.firstOrNull { it.name?.asString() == "name" }?.value as? String
+                if (!name.isNullOrBlank()) return name
+            }
+        }
+        // 检查属性本身的 @set:JvmName（KSP 中可能直接在属性注解上）
+        prop.annotations.forEach { anno ->
+            if (anno.shortName.asString() == "JvmName" && anno.useSiteTarget?.name == "SET") {
+                val name = anno.arguments.firstOrNull { it.name?.asString() == "name" }?.value as? String
+                if (!name.isNullOrBlank()) return name
+            }
+        }
+        return null
     }
 
     private fun decap(input: String): String {

@@ -131,10 +131,18 @@ enum class ParamType {
             }
         }
 
-        private fun getBySupertype(ksType: KSType): ParamType? = when {
-            isSubtypeOf(ksType, "android.os.Parcelable") -> ParcelableSubtype
-            isSubtypeOf(ksType, "java.io.Serializable") -> SerializableSubtype
-            else -> null
+        private fun getBySupertype(ksType: KSType): ParamType? {
+            // 枚举类隐式实现 Serializable，但 KSP 对 kotlin.Enum 的 superTypes 解析可能不完整，
+            // 导致递归查找时找不到 java.io.Serializable，需要在此显式判断。
+            val declaration = ksType.declaration
+            if (declaration is KSClassDeclaration && declaration.classKind == ClassKind.ENUM_CLASS) {
+                return SerializableSubtype
+            }
+            return when {
+                isSubtypeOf(ksType, "android.os.Parcelable") -> ParcelableSubtype
+                isSubtypeOf(ksType, "java.io.Serializable") -> SerializableSubtype
+                else -> null
+            }
         }
 
         /** 类型继承判断缓存，key = "qualifiedName -> superTypeName" */
