@@ -138,7 +138,7 @@ enum class ParamType {
         }
 
         /** 类型继承判断缓存，key = "qualifiedName -> superTypeName" */
-        private val subtypeCache = mutableMapOf<String, Boolean>()
+        private val subtypeCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
         fun isSubtypeOf(ksType: KSType, superTypeName: kotlin.String): kotlin.Boolean {
             val declaration = ksType.declaration

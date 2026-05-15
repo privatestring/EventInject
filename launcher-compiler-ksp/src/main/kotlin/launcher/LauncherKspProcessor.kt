@@ -115,7 +115,7 @@ class LauncherKspProcessor(
             classBinding.bindingClassName = routerBindingClassName
             val routerJavaFile = RouterGeneration(classBinding).brewJava()
             val routerFile = codeGenerator.createNewFile(
-                dependencies = Dependencies(aggregating = true, containingFile),
+                dependencies = Dependencies(aggregating = false, containingFile),
                 packageName = routerJavaFile.packageName,
                 fileName = routerJavaFile.typeSpec.name,
                 extensionName = "java"

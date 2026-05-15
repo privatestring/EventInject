@@ -2,6 +2,7 @@ package launcher.codegeneration
 
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.MethodSpec
+import com.squareup.javapoet.TypeSpec
 import launcher.classbinding.ClassBinding
 import launcher.param.ArgumentBinding
 import launcher.utils.BUNDLE
@@ -19,16 +20,16 @@ import launcher.utils.INTENT
  */
 internal class ModelGeneration(classBinding: ClassBinding) : IntentBinding(classBinding) {
 
-    private var isFirst = true
-
     override fun createFillFieldsMethod() = fillByIntentBinding("model")
+
+    /** 通过 addExtraToClass 扩展点添加 bind(model, bundle) 方法，只生成一次 */
+    override fun TypeSpec.Builder.addExtraToClass(): TypeSpec.Builder {
+        addMethod(createBindFragment())
+        return this
+    }
 
     override fun createStarters(variant: List<ArgumentBinding>): List<MethodSpec> {
         return arrayListOf<MethodSpec>().apply {
-            if (isFirst) {
-                add(createBindFragment())
-                isFirst = false
-            }
             add(createGetClassIntentMethod(variant))
             add(createGetArgumentsMethod(variant))
             if (classBinding.isParentClass) {

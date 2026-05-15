@@ -19,7 +19,7 @@ enum class KnownClassType(vararg val typeNames: String) {
 
     companion object {
         fun getByType(classDeclaration: KSClassDeclaration): KnownClassType {
-            return values().firstOrNull { type ->
+            return entries.firstOrNull { type ->
                 type.typeNames.any { typeName ->
                     typeName.isNotEmpty() && isSubtypeOf(classDeclaration, typeName, mutableSetOf())
                 }
