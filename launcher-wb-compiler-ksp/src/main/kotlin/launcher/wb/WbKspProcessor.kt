@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import launcher.wb.codegeneration.BaseGeneration
 import launcher.wb.codegeneration.FunctionGeneration
+import launcher.wb.codegeneration.MarketViewRouteGeneration
 
 /**
  * 佛祖保佑         永无BUG
@@ -45,7 +46,7 @@ class WbKspProcessor(
     private val generations: List<BaseGeneration> by lazy {
         listOf(
             FunctionGeneration(codeGenerator, logger),
-            // TODO: MarketViewRouteGeneration(codeGenerator, logger),
+            MarketViewRouteGeneration(codeGenerator, logger),
             // TODO: TradeInterfaceGeneration(codeGenerator, logger),
             // TODO: TradeServiceMakerGeneration(codeGenerator, logger),
             // TODO: MapperGeneration(codeGenerator, logger),

@@ -23,7 +23,7 @@
 | 功能一：Activity/Fragment Launcher | `docs/features/01-activity-launcher.md` | ❌ 不在此模块（已在 launcher-compiler-ksp） | `launcher-compiler-ksp` |
 | 功能二：Router 路由系统 | `docs/features/02-router.md` | ❌ 不在此模块（已在 launcher-compiler-ksp） | `launcher-compiler-ksp` |
 | **功能三：Function 功能地图** | `docs/features/03-function-map.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
-| **功能四：MarketViewRoute** | `docs/features/04-market-view-route.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
+| **功能四：MarketViewRoute** | `docs/features/04-market-view-route.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能五：TradeInterface** | `docs/features/05-trade-interface.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
 | **功能六：TradeServiceMaker** | `docs/features/06-trade-service-maker.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
 | **功能七：Mapper** | `docs/features/07-mapper.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
@@ -43,7 +43,8 @@ launcher-wb-compiler-ksp/
     │   ├── WbKspProcessor.kt            # 调度中心
     │   └── codegeneration/
     │       ├── BaseGeneration.kt         # 生成器抽象基类
-    │       └── FunctionGeneration.kt     # 功能三（已完成）
+    │       ├── FunctionGeneration.kt     # 功能三（已完成）
+    │       └── MarketViewRouteGeneration.kt  # 功能四（已完成）
     └── resources/META-INF/services/
         └── com.google.devtools.ksp.processing.SymbolProcessorProvider
 ```
@@ -76,7 +77,7 @@ rootProject.name='EventInject'
 ```
 WbKspProcessor（调度中心）
   ├── FunctionGeneration        ← 功能三（已完成）
-  ├── MarketViewRouteGeneration ← 功能四（待实现）
+  ├── MarketViewRouteGeneration ← 功能四（已完成）
   ├── TradeInterfaceGeneration  ← 功能五（待实现）
   ├── TradeServiceMakerGeneration ← 功能六（待实现）
   └── MapperGeneration          ← 功能七（待实现）
@@ -173,7 +174,7 @@ annotation class MarketViewRoute(
 | 文档 | 复杂度 | 关键点 |
 |------|--------|--------|
 | `03-function-map.md` | ⭐ | 已完成，可作为模板参考 |
-| `04-market-view-route.md` | ⭐ | 类似 Function，收集 key → 生成路由表 |
+| `04-market-view-route.md` | ⭐ | 已完成，收集 key → 生成视图工厂 |
 | `05-trade-interface.md` | ⭐⭐ | 涉及注解中 `Class` 值获取（KSP 中需特殊处理） |
 | `06-trade-service-maker.md` | ⭐⭐⭐ | 涉及包扫描 + 继承分析 |
 | `07-mapper.md` | ⭐⭐⭐⭐⭐ | 最复杂，1970 行代码生成 |
@@ -251,7 +252,7 @@ class XxxGeneration(
 
 按复杂度递增顺序实现：
 
-1. **功能四 MarketViewRoute** — 读取 `docs/features/04-market-view-route.md`，参考 `launcher-compiler/.../MarketViewRouteGeneration.kt`
+1. ~~**功能四 MarketViewRoute**~~ — ✅ 已完成，迁移文档：`docs/migration/04-market-view-route-migration.md`
 2. **功能五 TradeInterface** — 读取 `docs/features/05-trade-interface.md`，注意 KSP 中获取注解 Class 值的方式
 3. **功能六 TradeServiceMaker** — 读取 `docs/features/06-trade-service-maker.md`
 4. **功能七 Mapper** — 读取 `docs/features/07-mapper.md`
