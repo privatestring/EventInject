@@ -47,4 +47,5 @@ dependencies {
 
     implementation project(':launcher-joke')
     ksp project(':launcher-compiler-ksp')
+    ksp project(':launcher-wb-compiler-ksp')
 }
