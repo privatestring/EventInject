@@ -24,7 +24,7 @@
 | 功能二：Router 路由系统 | `docs/features/02-router.md` | ❌ 不在此模块（已在 launcher-compiler-ksp） | `launcher-compiler-ksp` |
 | **功能三：Function 功能地图** | `docs/features/03-function-map.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能四：MarketViewRoute** | `docs/features/04-market-view-route.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
-| **功能五：TradeInterface** | `docs/features/05-trade-interface.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
+| **功能五：TradeInterface** | `docs/features/05-trade-interface.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能六：TradeServiceMaker** | `docs/features/06-trade-service-maker.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
 | **功能七：Mapper** | `docs/features/07-mapper.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
 
@@ -44,7 +44,8 @@ launcher-wb-compiler-ksp/
     │   └── codegeneration/
     │       ├── BaseGeneration.kt         # 生成器抽象基类
     │       ├── FunctionGeneration.kt     # 功能三（已完成）
-    │       └── MarketViewRouteGeneration.kt  # 功能四（已完成）
+    │       ├── MarketViewRouteGeneration.kt  # 功能四（已完成）
+    │       └── TradeInterfaceGeneration.kt   # 功能五（已完成）
     └── resources/META-INF/services/
         └── com.google.devtools.ksp.processing.SymbolProcessorProvider
 ```
@@ -160,14 +161,35 @@ annotation class MarketViewRoute(
 | 文件 | 对应功能 |
 |------|---------|
 | `FunctionGeneration.kt` | 功能三（已迁移） |
-| `MarketViewRouteGeneration.kt` | 功能四 |
+| `MarketViewRouteGeneration.kt` | 功能四（已迁移） |
 | `TradeInterfaceGeneration.kt` | 功能五 |
 | `TradeServiceAggregatorGeneration.kt` | 功能六 |
 | `MapperGeneration.kt` | 功能七 |
 
 ---
 
-## 7. 功能文档
+## 7. 项目使用文档（产品侧）
+
+路径：`docs/product/`
+
+| 文档 | 对应功能 | 说明 |
+|------|---------|------|
+| `function.txt` | 功能三：Function 功能地图 | 源文件列表、生成文件路径 |
+| `market-view-route.txt` | 功能四：MarketViewRoute | 17 个源文件、key/desc 值、生成文件路径 |
+| `trade-interface.txt` | 功能五：TradeInterface | 源文件列表、生成文件路径 |
+| `trade-service-maker.txt` | 功能六：TradeServiceMaker | 源文件列表、生成文件路径 |
+| `mapper.txt` | 功能七：Mapper | 源文件列表、生成文件路径 |
+| `boom.txt` | 功能一：Activity/Fragment Launcher | @Boom 参数注解（launcher-compiler-ksp） |
+| `router.txt` | 功能二：Router 路由系统 | @Router 注解（launcher-compiler-ksp） |
+| `router-check.txt` | 功能二补充：路由校验 | 路由重复检测 |
+| `parent-cls.txt` | 辅助：父类继承关系 | 基类信息 |
+| `make-result.txt` | 辅助：生成结果汇总 | 各功能生成产物概览 |
+
+> **用途**：每个功能开发前，先读取对应的 `docs/product/xxx.txt` 获取真实项目的源文件列表和注解用法，用于创建测试类。
+
+---
+
+## 8. 功能文档
 
 详细业务文档位于 `docs/features/` 目录：
 
@@ -181,7 +203,7 @@ annotation class MarketViewRoute(
 
 ---
 
-## 8. 编译验证命令
+## 9. 编译验证命令
 
 ```bash
 # 编译 KSP 处理器模块
@@ -201,7 +223,7 @@ cat app/build/generated/ksp/debug/kotlin/com/webull/functionmap/FunctionFactory.
 
 ---
 
-## 9. 设计原则
+## 10. 设计原则
 
 1. **生成 Kotlin 代码**（KotlinPoet），使用 `object` 单例
 2. **`@JvmStatic` / `@JvmField`** 确保 Java 调用方兼容
@@ -212,7 +234,7 @@ cat app/build/generated/ksp/debug/kotlin/com/webull/functionmap/FunctionFactory.
 
 ---
 
-## 10. 已完成的 FunctionGeneration 作为模板
+## 11. 已完成的 FunctionGeneration 作为模板
 
 关键模式（后续功能可参考）：
 
@@ -248,12 +270,12 @@ class XxxGeneration(
 
 ---
 
-## 11. 下一步工作
+## 12. 下一步工作
 
 按复杂度递增顺序实现：
 
 1. ~~**功能四 MarketViewRoute**~~ — ✅ 已完成，迁移文档：`docs/migration/04-market-view-route-migration.md`
-2. **功能五 TradeInterface** — 读取 `docs/features/05-trade-interface.md`，注意 KSP 中获取注解 Class 值的方式
+2. ~~**功能五 TradeInterface**~~ — ✅ 已完成，迁移文档：`docs/migration/05-trade-interface-migration.md`
 3. **功能六 TradeServiceMaker** — 读取 `docs/features/06-trade-service-maker.md`
 4. **功能七 Mapper** — 读取 `docs/features/07-mapper.md`
 

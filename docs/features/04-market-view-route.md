@@ -38,17 +38,29 @@ public @interface MarketViewRoute {
 
 ### 4.1 收集阶段
 
-在 `processFunction()` 中与 `@Function` 一起收集：
+在 `processFunction()` 中，`@Function` 和 `@MarketViewRoute` 共享同一个输入集合（两个注解的并集），然后分别筛选：
 
 ```kotlin
-val allView = mutableListOf<TypeElement>()
+// 输入：@Function + @MarketViewRoute 注解类的并集
+processFunction(mutableSetOf<TypeElement>().apply {
+    processAnnotation<Function>(env) { element -> add(element as TypeElement) }
+    processAnnotation<MarketViewRoute>(env) { element -> add(element as TypeElement) }
+})
+
+// 内部分别筛选
 for (classToProcess in classesToProcess) {
+    val allFunctionAno = classToProcess.getAnnotation(Function::class.java)
+    if (allFunctionAno != null) {
+        allFunction.add(classToProcess)       // → FunctionFactory
+    }
     val viewAno = classToProcess.getAnnotation(MarketViewRoute::class.java)
     if (viewAno != null) {
-        allView.add(classToProcess)
+        allView.add(classToProcess)           // → MarketViewRouteFactory
     }
 }
 ```
+
+**重要**：一个类可以同时标注 `@Function` 和 `@MarketViewRoute`，会同时出现在两个工厂中。两个注解互不影响，独立生成。
 
 ### 4.2 生成阶段
 
@@ -202,4 +214,32 @@ val key = MarketViewRouteFactory.VIEW_KLINE  // "kline"
 ## 10. 生成文件位置
 
 - 包名：`com.webull.market.common.base`
-- 文件名：`MarketViewRouteFactory.java`
+- 文件名：`MarketViewRouteFactory.java`（KAPT）/ `MarketViewRouteFactory.kt`（KSP）
+
+---
+
+## 11. KSP 版本差异
+
+### 11.1 与 FunctionGeneration 的关系
+
+原始 KAPT 中，`@Function` 和 `@MarketViewRoute` 在同一个 `processFunction()` 方法中共享输入集合。KSP 版本中两个 Generation 独立收集（各自调用 `getSymbolsWithAnnotation`），行为等价但解耦更清晰。
+
+**注意**：`FunctionGeneration` 中也扫描了 `@MarketViewRoute` 注解的类作为 candidates（与原 KAPT 行为一致），但只有同时标注了 `@Function` 的类才会进入 `FunctionFactory`。纯 `@MarketViewRoute` 的类只会出现在 `MarketViewRouteFactory` 中。
+
+### 11.2 新增优化 API
+
+| 方法 | 说明 |
+|------|------|
+| `viewCreatorMap` | `@JvmField` Lambda 构造器 map，支持运行时动态注册 |
+| `initViewCreators()` | `@JvmStatic` 初始化 map |
+| `createViewById(context, key)` | `@JvmStatic` 通过 map O(1) 查找创建 View |
+
+### 11.3 生成文件对比
+
+| 维度 | KAPT | KSP |
+|------|------|-----|
+| 文件 | `MarketViewRouteFactory.java` | `MarketViewRouteFactory.kt` |
+| 类型 | `public final class` | `object` 单例 |
+| 常量 | `public static final String` | `const val`（编译后等价） |
+| 工厂方法 | `switch-case` | `when` 分支 + map 查找 |
+| Java 互操作 | 原生 | `@JvmStatic` / `@JvmField` |

@@ -8,6 +8,7 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import launcher.wb.codegeneration.BaseGeneration
 import launcher.wb.codegeneration.FunctionGeneration
 import launcher.wb.codegeneration.MarketViewRouteGeneration
+import launcher.wb.codegeneration.TradeInterfaceGeneration
 
 /**
  * 佛祖保佑         永无BUG
@@ -36,8 +37,8 @@ class WbKspProcessor(
     private val options: Map<String, String>
 ) : SymbolProcessor {
 
-    /** 防止多轮处理时重复生成 */
-    private var processed = false
+    /** 按 Generation 粒度追踪已生成状态，避免多轮处理时重复生成 */
+    private val generatedSet = mutableSetOf<BaseGeneration>()
 
     /**
      * 所有功能模块的生成器列表。
@@ -47,33 +48,30 @@ class WbKspProcessor(
         listOf(
             FunctionGeneration(codeGenerator, logger),
             MarketViewRouteGeneration(codeGenerator, logger),
-            // TODO: TradeInterfaceGeneration(codeGenerator, logger),
+            TradeInterfaceGeneration(codeGenerator, logger, options),
             // TODO: TradeServiceMakerGeneration(codeGenerator, logger),
             // TODO: MapperGeneration(codeGenerator, logger),
         )
     }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        if (processed) return emptyList()
-
         val allUnprocessed = mutableListOf<KSAnnotated>()
 
-        // 阶段一：各模块收集注解符号
+        // 阶段一：各模块收集注解符号（跳过已生成的模块）
         for (generation in generations) {
+            if (generation in generatedSet) continue
             val unprocessed = generation.collect(resolver)
             allUnprocessed.addAll(unprocessed)
         }
 
-        // 阶段二：各模块生成代码
-        var generated = false
+        // 阶段二：各模块生成代码（跳过已生成的模块）
         for (generation in generations) {
+            if (generation in generatedSet) continue
             if (generation.hasDataToGenerate()) {
                 generation.generate()
-                generated = true
+                generatedSet += generation
             }
         }
-
-        if (generated) processed = true
 
         return allUnprocessed
     }

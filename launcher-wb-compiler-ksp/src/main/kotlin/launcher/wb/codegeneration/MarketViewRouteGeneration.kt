@@ -100,14 +100,14 @@ class MarketViewRouteGeneration(
     private fun createFactoryObject(): TypeSpec {
         return TypeSpec.objectBuilder(CLASS_NAME)
             .addKdoc("市场 View 映射\n")
-            // ===== 1. Key 常量（对齐原始 KAPT 结构） =====
+            // ===== 1. Key 常量 =====
             .addViewKeyConstants()
-            // ===== 2. 工厂方法（对齐原始 KAPT 结构） =====
-            .addFunction(buildCreateViewMethod())
-            // ===== 3. 优化：lambda 构造器 map（新增） =====
+            // ===== 2. lambda 构造器 map =====
             .addCreatorMapProperty()
             .addFunction(buildInitViewCreatorsMethod())
             .addFunction(buildCreateViewByIdMethod())
+            // ===== 3. 兼容旧 API（委托给 createViewById） =====
+            .addFunction(buildCreateViewMethod())
             .build()
     }
 
@@ -202,7 +202,7 @@ class MarketViewRouteGeneration(
 
     /**
      * 生成 createView(context: Context, key: String): View? 方法
-     * 使用 when 分支，兼容原有 Java switch-case 调用方式
+     * 委托给 createViewById()，保持 API 兼容，标记为 @Deprecated 引导迁移
      */
     private fun buildCreateViewMethod(): FunSpec {
         val contextClass = ClassName("android.content", "Context")
@@ -210,22 +210,16 @@ class MarketViewRouteGeneration(
 
         return FunSpec.builder("createView")
             .addAnnotation(JVM_STATIC)
+            .addAnnotation(
+                AnnotationSpec.builder(Deprecated::class)
+                    .addMember("message = %S", "Use createViewById instead")
+                    .addMember("replaceWith = %T(%S)", ReplaceWith::class, "createViewById(context, key)")
+                    .build()
+            )
             .addParameter("context", contextClass)
             .addParameter("key", STRING)
             .returns(viewClass.copy(nullable = true))
-            .addCode(buildCodeBlock {
-                addStatement("val view: %T?", viewClass)
-                beginControlFlow("when (key)")
-                viewClasses.forEach { classDecl ->
-                    val key = getViewKey(classDecl)
-                    val qualifiedName = classDecl.qualifiedName?.asString() ?: return@forEach
-                    val targetClass = ClassName.bestGuess(qualifiedName)
-                    addStatement("%S -> view = %T(context)", key, targetClass)
-                }
-                addStatement("else -> view = null")
-                endControlFlow()
-                addStatement("return view")
-            })
+            .addStatement("return createViewById(context, key)")
             .build()
     }
 
