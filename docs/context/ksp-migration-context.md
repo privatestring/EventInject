@@ -25,7 +25,7 @@
 | **功能三：Function 功能地图** | `docs/features/03-function-map.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能四：MarketViewRoute** | `docs/features/04-market-view-route.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能五：TradeInterface** | `docs/features/05-trade-interface.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
-| **功能六：TradeServiceMaker** | `docs/features/06-trade-service-maker.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
+| **功能六：TradeServiceMaker** | `docs/features/06-trade-service-maker.md` | ✅ 已完成 | `launcher-wb-compiler-ksp` |
 | **功能七：Mapper** | `docs/features/07-mapper.md` | 🔲 待实现 | `launcher-wb-compiler-ksp` |
 
 ---
@@ -45,7 +45,8 @@ launcher-wb-compiler-ksp/
     │       ├── BaseGeneration.kt         # 生成器抽象基类
     │       ├── FunctionGeneration.kt     # 功能三（已完成）
     │       ├── MarketViewRouteGeneration.kt  # 功能四（已完成）
-    │       └── TradeInterfaceGeneration.kt   # 功能五（已完成）
+    │       ├── TradeInterfaceGeneration.kt   # 功能五（已完成）
+    │       └── TradeServiceMakerGeneration.kt # 功能六（已完成）
     └── resources/META-INF/services/
         └── com.google.devtools.ksp.processing.SymbolProcessorProvider
 ```
@@ -77,11 +78,11 @@ rootProject.name='EventInject'
 
 ```
 WbKspProcessor（调度中心）
-  ├── FunctionGeneration        ← 功能三（已完成）
-  ├── MarketViewRouteGeneration ← 功能四（已完成）
-  ├── TradeInterfaceGeneration  ← 功能五（待实现）
-  ├── TradeServiceMakerGeneration ← 功能六（待实现）
-  └── MapperGeneration          ← 功能七（待实现）
+  ├── FunctionGeneration            ← 功能三（已完成）
+  ├── MarketViewRouteGeneration     ← 功能四（已完成）
+  ├── TradeInterfaceGeneration      ← 功能五（已完成）
+  ├── TradeServiceMakerGeneration   ← 功能六（已完成）
+  └── MapperGeneration              ← 功能七（待实现）
 ```
 
 ### 3.2 新增功能的步骤
@@ -147,8 +148,21 @@ annotation class MarketViewRoute(
     val desc: String = ""
 )
 
-// TradeInterface.kt — 需要查看
-// TradeServiceMaker.kt — 需要查看
+// TradeInterface.kt
+annotation class TradeInterface(
+    val value: KClass<*>,
+    val isInner: Boolean = false
+)
+
+// TradeServiceMaker.kt
+annotation class TradeServiceMaker(
+    val baseInterface: KClass<*>,
+    val scanPackages: Array<String> = [],
+    val additionalInterfaces: Array<KClass<*>> = [],
+    val packageName: String = "",
+    val className: String = ""
+)
+
 // （Mapper 相关注解在 launcher-joke/src/main/java/mapper/ 目录）
 ```
 
@@ -162,8 +176,8 @@ annotation class MarketViewRoute(
 |------|---------|
 | `FunctionGeneration.kt` | 功能三（已迁移） |
 | `MarketViewRouteGeneration.kt` | 功能四（已迁移） |
-| `TradeInterfaceGeneration.kt` | 功能五 |
-| `TradeServiceAggregatorGeneration.kt` | 功能六 |
+| `TradeInterfaceGeneration.kt` | 功能五（已迁移） |
+| `TradeServiceAggregatorGeneration.kt` | 功能六（已迁移） |
 | `MapperGeneration.kt` | 功能七 |
 
 ---
@@ -197,8 +211,8 @@ annotation class MarketViewRoute(
 |------|--------|--------|
 | `03-function-map.md` | ⭐ | 已完成，可作为模板参考 |
 | `04-market-view-route.md` | ⭐ | 已完成，收集 key → 生成视图工厂 |
-| `05-trade-interface.md` | ⭐⭐ | 涉及注解中 `Class` 值获取（KSP 中需特殊处理） |
-| `06-trade-service-maker.md` | ⭐⭐⭐ | 涉及包扫描 + 继承分析 |
+| `05-trade-interface.md` | ⭐⭐ | 已完成，涉及注解中 `Class` 值获取（KSP 中需特殊处理） |
+| `06-trade-service-maker.md` | ⭐⭐⭐ | 已完成，涉及包扫描 + 继承分析 |
 | `07-mapper.md` | ⭐⭐⭐⭐⭐ | 最复杂，1970 行代码生成 |
 
 ---
@@ -217,6 +231,7 @@ rm -rf app/build/generated/ksp && ./gradlew :app:kspDebugKotlin
 
 # 查看生成结果
 cat app/build/generated/ksp/debug/kotlin/com/webull/functionmap/FunctionFactory.kt
+cat app/build/generated/ksp/debug/kotlin/com/joker/event/tradeservicemaker/ITradeManagerService.kt
 ```
 
 工作目录：`/Users/joker/webull/webull/inject/EventInject`
@@ -270,14 +285,48 @@ class XxxGeneration(
 
 ---
 
-## 12. 下一步工作
+## 12. 功能六 TradeServiceMaker 实现要点
 
-按复杂度递增顺序实现：
+### 核心逻辑
 
-1. ~~**功能四 MarketViewRoute**~~ — ✅ 已完成，迁移文档：`docs/migration/04-market-view-route-migration.md`
-2. ~~**功能五 TradeInterface**~~ — ✅ 已完成，迁移文档：`docs/migration/05-trade-interface-migration.md`
-3. **功能六 TradeServiceMaker** — 读取 `docs/features/06-trade-service-maker.md`
-4. **功能七 Mapper** — 读取 `docs/features/07-mapper.md`
+1. **收集** `@TradeServiceMaker` 注解，提取 `baseInterface`（KSType）、`scanPackages`（List<String>）、`additionalInterfaces`（List<KSType>）、`packageName`、`className`
+2. **包扫描**：通过 `resolver.getAllFiles()` 遍历所有文件，按包名前缀匹配（精确 + 子包），找出继承自 `baseInterface` 的接口
+3. **顶层筛选**：对于每个候选接口，检查是否被其他候选接口继承；未被继承的即为顶层接口
+4. **生成**：用 KotlinPoet 生成一个 `interface`，继承所有顶层接口（按字母排序）+ additionalInterfaces
+
+### KSP 特殊处理
+
+- 注解中 `KClass<*>` 参数在 KSP 中直接以 `KSType` 形式返回（无需 `MirroredTypeException` 技巧）
+- 继承关系判断使用 `KSClassDeclaration.getAllSuperTypes()`
+- 包扫描使用 `resolver.getAllFiles()` + 包名前缀匹配
+
+### 测试用例结构
+
+```
+app/src/main/java/com/joker/event/tradeservicemaker/
+├── IService.kt                          # additionalInterface
+├── ITradeManagerServiceMaker.kt         # @TradeServiceMaker 标记类
+└── trade/
+    ├── base/ITradeInterface.kt          # 基础接口
+    ├── account/                         # 4 个接口，ITradeAccountInterface 为顶层
+    ├── asset/                           # 6 个接口，ITradeAssetInterface 为顶层
+    ├── core/ITradeCoreInterface.kt      # 顶层
+    ├── global/ITradeGlobalInterface.kt  # 顶层
+    ├── order/                           # 6 个接口，ITradeOrderInterface 为顶层
+    └── wealth/ITradeWealthInterface.kt  # 顶层
+```
+
+### 生成结果验证
+
+生成的 `ITradeManagerService` 与原 KAPT 版本完全一致：
+- 6 个顶层接口（按字母排序）：ITradeAccountInterface, ITradeAssetInterface, ITradeCoreInterface, ITradeGlobalInterface, ITradeOrderInterface, ITradeWealthInterface
+- 1 个 additional 接口：IService
+
+---
+
+## 13. 下一步工作
+
+1. **功能七 Mapper** — 读取 `docs/features/07-mapper.md`
 
 每完成一个功能后：
 - 在 `WbKspProcessor.generations` 中注册
