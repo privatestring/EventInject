@@ -5,16 +5,16 @@
 - **工作区路径**: `/Users/joker/webull/webull/inject/EventInject`
 - **源项目路径**: `/Users/joker/webull/git/AppDev3`（参考真实源文件的 @Boom 属性和 bean 类包名）
 - **目标**: 将 `launcher-compiler`（KAPT）迁移为 `launcher-compiler-ksp`（KSP）
-- **本期范围**: 只实现**功能一：Activity/Fragment/BroadcastReceiver/Model 启动器**（@Boom/@MakeResult/@ParentCls）
+- **已完成范围**: 功能一（Activity/Fragment/BroadcastReceiver/Model 启动器）+ 功能二（Router 路由系统）
 
 ## 已完成的工作
 
 ### 1. KSP 模块创建与处理器实现
 
 - `launcher-compiler-ksp/` 模块已创建，KSP `2.0.21-1.0.28`，Kotlin `2.0.21`
-- 支持 @Boom、@MakeResult、@ParentCls 注解处理
-- 已清理不属于本期的代码（@Router 相关已移除）
+- 支持 @Boom、@MakeResult、@ParentCls、@Router 注解处理
 - `./gradlew :app:kspDebugKotlin` **BUILD SUCCESSFUL**
+- `./gradlew :app:compileDebugKotlin` **BUILD SUCCESSFUL**
 
 ### 2. 关键技术决策
 
@@ -27,6 +27,7 @@
 | `ArrayList<Serializable子类>` | `ParamType.getArrayListType` 中新增 Serializable 元素检查，返回 `SerializableSubtype` |
 | 泛型参数保留 | `KspTypeUtils.toTypeName()` 递归处理泛型参数，支持 `out`→`? extends`、`in`→`? super` |
 | 内部类处理 | `resolveClassName()` 通过 `parentDeclaration` 链构建正确的 `ClassName.get(pkg, outer, inner)` |
+| @Router.cls 获取 | KSP 直接从 `KSAnnotation.arguments` 获取 `KSType`，无需 `MirroredTypeException` |
 
 ### 3. KSP vs KAPT 对比验证结果
 
@@ -56,6 +57,11 @@
 - 覆盖类型：Activity(3)、Fragment(8)、DialogFragment(14)、Model(5)，含 1 个 Java 文件
 - Bean stub 类按源项目真实包名创建（均实现 Serializable）
 
+### 5.1 Router 测试用例（1 个文件）
+
+- `RouterTestActivity.kt` — 带 `@Router` + `@Boom` 的 Activity，验证 Router 生成
+- 生成 `RouterTestActivityLauncher.java`（标准 Launcher）+ `RouterTestActivity_XXXxxx.java`（Router）
+
 ### 6. Bean Stub 类包名对照
 
 | Bean 类 | 包名 | 文件路径 |
@@ -77,19 +83,20 @@
 
 ```
 launcher-compiler-ksp/src/main/kotlin/launcher/
-├── LauncherKspProcessor.kt          # 入口，扫描 @Boom/@MakeResult/@ParentCls
+├── LauncherKspProcessor.kt          # 入口，扫描 @Boom/@MakeResult/@ParentCls/@Router
 ├── LauncherKspProvider.kt           # SymbolProcessorProvider
 ├── classbinding/
-│   ├── ClassBinding.kt              # 类绑定数据模型
+│   ├── ClassBinding.kt              # 类绑定数据模型（含 routerPath/cls）
 │   ├── ClassBindingFactory.kt       # 解析注解构建 ClassBinding
 │   └── KnownClassType.kt           # Activity/Fragment/BroadcastReceiver/Model 判断
 ├── codegeneration/
-│   ├── ClassGeneration.kt           # 代码生成基类
+│   ├── ClassGeneration.kt           # 代码生成基类（含 addExtraToClass/addExtraTop 扩展点）
 │   ├── IntentBinding.kt             # Intent 绑定基类（Activity/Model/BR 共用）
 │   ├── ActivityGeneration.kt        # Activity Launcher 生成
 │   ├── FragmentGeneration.kt        # Fragment Launcher 生成
 │   ├── BroadcastReceiverGeneration.kt
 │   ├── ModelGeneration.kt           # Model Launcher 生成
+│   ├── RouterGeneration.kt          # Router _XXXxxx 生成（putRouter/jump/getActionScheme）
 │   └── BindingHelpers.kt           # Bundle/Intent getter/setter 辅助
 ├── param/
 │   ├── ParamType.kt                 # 参数类型枚举与类型解析
@@ -97,7 +104,7 @@ launcher-compiler-ksp/src/main/kotlin/launcher/
 │   ├── ArgumentFactory.kt           # 解析 @Boom 属性
 │   └── FieldAccessor.kt            # 字段访问方式判断
 ├── utils/
-│   ├── Utils.kt                     # 常量和工具方法
+│   ├── Utils.kt                     # 常量和工具方法（含 STRINGBUILDER）
 │   └── KspTypeUtils.kt             # KSP 类型转 JavaPoet TypeName
 └── error/
     └── Errors.kt                    # 错误信息常量
@@ -111,6 +118,7 @@ launcher-compiler-ksp/src/main/kotlin/launcher/param/ParamType.kt
 launcher-compiler-ksp/src/main/kotlin/launcher/param/FieldAccessor.kt
 launcher-compiler-ksp/src/main/kotlin/launcher/codegeneration/ClassGeneration.kt
 launcher-compiler-ksp/src/main/kotlin/launcher/codegeneration/IntentBinding.kt
+launcher-compiler-ksp/src/main/kotlin/launcher/codegeneration/RouterGeneration.kt
 launcher-compiler-ksp/src/main/kotlin/launcher/classbinding/ClassBindingFactory.kt
 launcher-compiler-ksp/src/main/kotlin/launcher/classbinding/ClassBinding.kt
 launcher-compiler-ksp/build.gradle
@@ -118,10 +126,9 @@ app/build.gradle
 docs/product/boom.txt
 ```
 
-## 待做（后续迁移，不在本期）
+## 待做（后续迁移）
 
 - @Function → 生成 FunctionFactory
-- @Router → 生成 Router
 - @MarketViewRoute → 生成 MarketViewRouteFactory
 - @TradeInterface → 生成 TradeInterfaceFactory
 - @TradeServiceMaker → 生成 TradeServiceAggregator
