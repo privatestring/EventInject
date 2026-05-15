@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.devtools.ksp'
 
 
 android {
@@ -42,9 +43,8 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.18.0'
 
     implementation project(':EventAnnotation')
-    kapt project(':EventInjectCompiler')
+    ksp project(':EventInjectCompiler')
 
-
-    implementation project(':launcher-compiler')
-    kapt project(':launcher-joke')
+    implementation project(':launcher-joke')
+    ksp project(':launcher-compiler-ksp')
 }

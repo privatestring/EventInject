@@ -1,17 +1,16 @@
-apply plugin: 'java-library'
 apply plugin: 'kotlin'
-apply plugin: 'kotlin-kapt'
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'com.squareup:kotlinpoet:1.18.1'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'com.google.auto.service:auto-service:1.1.1'
-    kapt 'com.google.auto.service:auto-service:1.1.1'
-    implementation project (':EventAnnotation')
-
-
+    implementation 'com.google.devtools.ksp:symbol-processing-api:2.0.21-1.0.28'
+    implementation project(':EventAnnotation')
 }
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
+kotlin {
+    jvmToolchain(17)
+}
+
+java {
+    withSourcesJar()
+}

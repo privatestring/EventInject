@@ -1,69 +1,92 @@
 package com.joker.poet
 
-import com.google.auto.service.AutoService
-import com.joker.annotation.EventBridge
-import com.joker.poet.utils.Logger
-import com.squareup.kotlinpoet.*
-import javax.annotation.processing.*
-import javax.lang.model.SourceVersion
-import javax.lang.model.element.TypeElement
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.validate
+import com.squareup.kotlinpoet.ANY
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asTypeName
 
 /**
- * 佛祖保佑         永无BUG
+ * EventBridge KSP 处理器。
  *
- * @author Created by joker on 2019-11-20
+ * 扫描 @EventBridge 注解的类，生成 EventInjectImpl，
+ * 包含 postEventInject(scheme, params) 方法，根据 schemes 分发到对应 handleEvent。
  */
-@AutoService(Processor::class)
-@SupportedSourceVersion(SourceVersion.RELEASE_8)
-class EventInjectProcessor : AbstractProcessor() {
+class EventInjectProcessor(
+    private val codeGenerator: CodeGenerator,
+    private val logger: KSPLogger
+) : SymbolProcessor {
 
-    override fun init(processingEnv: ProcessingEnvironment?) {
-        super.init(processingEnv)
-        processingEnv?.messager?.apply { logger = Logger(this) }
-        eventProcessingEnv = processingEnv
-    }
+    override fun process(resolver: Resolver): List<KSAnnotated> {
+        val symbols = resolver.getSymbolsWithAnnotation("com.joker.annotation.EventBridge")
+        val unprocessed = symbols.filter { !it.validate() }.toList()
+        val elements = symbols.filter { it.validate() && it is KSClassDeclaration }
+            .map { it as KSClassDeclaration }
+            .toList()
 
-    override fun getSupportedAnnotationTypes(): MutableSet<String> {
-        return setOf(EventBridge::class.java.canonicalName).toMutableSet()
-    }
+        if (elements.isEmpty()) return unprocessed
 
-
-    override fun process(
-        annotations: MutableSet<out TypeElement>?, roundEnv: RoundEnvironment
-    ): Boolean {
-        val elements = roundEnv.getElementsAnnotatedWith(EventBridge::class.java).orEmpty()
-        if (elements.isNotEmpty()) {
-            val postFunc = FunSpec.builder("postEventInject")
-                .addComment("this is kotlin doc")
-                .addParameter("scheme", String::class.asTypeName())
-                .addParameter("params", Any::class.asTypeName().copy(nullable = true))
-                .returns(Any::class.asTypeName().copy(nullable = true))
-            elements.forEachIndexed { index, element ->
-                element.getAnnotation(EventBridge::class.java)?.let { event ->
-                    var listStr = "arrayOf("
-                    event.schemes.forEachIndexed { index, s ->
-                        if (index > 0) listStr += ","
-                        listStr += "\"$s\""
-                    }
-                    listStr += ")"
-                    if (index == 0) {
-                        postFunc.beginControlFlow("if ($listStr.any { it == scheme })")
-                    } else {
-                        postFunc.nextControlFlow("else if ($listStr.any { it == scheme })")
-                    }
-                    postFunc.addStatement("return %T().handleEvent(params)", element.asType())
-                }
+        // 过滤掉 schemes 为空的类（无法匹配任何 scheme）
+        val validElements = elements.filter { classDecl ->
+            val annotation = classDecl.annotations.first { ann ->
+                ann.shortName.asString() == "EventBridge"
             }
-            postFunc.endControlFlow()
-            postFunc.addStatement("return null")
-            val eventFile = FileSpec.builder("com.mei.models", "EventInject")
-            val typeSpec = TypeSpec.classBuilder("EventInjectImpl")
-            typeSpec.addFunction(postFunc.build())
-            eventFile.addType(typeSpec.build())
-            eventFile.build().writeFile()
+            val schemes = annotation.arguments.first().value as? List<*> ?: emptyList<String>()
+            schemes.isNotEmpty()
         }
-        return true
+
+        if (validElements.isEmpty()) return unprocessed
+
+        val postFunc = FunSpec.builder("postEventInject")
+            .addParameter("scheme", String::class.asTypeName())
+            .addParameter("params", ANY.copy(nullable = true))
+            .returns(ANY.copy(nullable = true))
+
+        validElements.forEachIndexed { index, classDecl ->
+            val annotation = classDecl.annotations.first { ann ->
+                ann.shortName.asString() == "EventBridge"
+            }
+            val schemes = annotation.arguments.first().value as List<*>
+            val listStr = schemes.joinToString(",") { "\"$it\"" }
+            val qualifiedName = classDecl.qualifiedName?.asString() ?: return@forEachIndexed
+
+            if (index == 0) {
+                postFunc.beginControlFlow("if (arrayOf($listStr).any { it == scheme })")
+            } else {
+                postFunc.nextControlFlow("else if (arrayOf($listStr).any { it == scheme })")
+            }
+            postFunc.addStatement("return %L().handleEvent(params)", qualifiedName)
+        }
+        postFunc.endControlFlow()
+        postFunc.addStatement("return null")
+
+        val typeSpec = TypeSpec.classBuilder("EventInjectImpl")
+            .addFunction(postFunc.build())
+            .build()
+
+        val fileSpec = FileSpec.builder("com.mei.models", "EventInject")
+            .addType(typeSpec)
+            .build()
+
+        val containingFiles = validElements.mapNotNull { it.containingFile }
+        val file = codeGenerator.createNewFile(
+            dependencies = Dependencies(aggregating = true, *containingFiles.toTypedArray()),
+            packageName = "com.mei.models",
+            fileName = "EventInject",
+            extensionName = "kt"
+        )
+        file.writer().use { writer ->
+            fileSpec.writeTo(writer)
+        }
+
+        return unprocessed
     }
-
-
 }
