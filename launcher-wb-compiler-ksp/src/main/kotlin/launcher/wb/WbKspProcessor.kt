@@ -9,6 +9,7 @@ import launcher.wb.codegeneration.BaseGeneration
 import launcher.wb.codegeneration.FunctionGeneration
 import launcher.wb.codegeneration.MarketViewRouteGeneration
 import launcher.wb.codegeneration.TradeInterfaceGeneration
+import launcher.wb.codegeneration.TradeServiceMakerGeneration
 
 /**
  * 佛祖保佑         永无BUG
@@ -49,7 +50,7 @@ class WbKspProcessor(
             FunctionGeneration(codeGenerator, logger),
             MarketViewRouteGeneration(codeGenerator, logger),
             TradeInterfaceGeneration(codeGenerator, logger, options),
-            // TODO: TradeServiceMakerGeneration(codeGenerator, logger),
+            TradeServiceMakerGeneration(codeGenerator, logger),
             // TODO: MapperGeneration(codeGenerator, logger),
         )
     }
