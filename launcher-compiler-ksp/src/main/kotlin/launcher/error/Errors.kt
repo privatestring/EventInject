@@ -1,5 +1,12 @@
 package launcher.error
 
+/**
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * 编译期错误消息常量
+ */
 object Errors {
     const val notAClass = "fields may only be contained in classes."
     const val privateClass = "fields may not be contained in private classes."

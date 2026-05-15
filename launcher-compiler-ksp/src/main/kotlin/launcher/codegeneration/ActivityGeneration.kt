@@ -9,6 +9,15 @@ import launcher.utils.START_RESULT_METHOD_NAME
 import launcher.utils.addIf
 import launcher.utils.doIf
 
+/**
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * Activity Launcher 代码生成。
+ * 生成：bind(activity) / getIntentFrom(context, params) / startActivity(context, params)
+ * ParentCls 模式下生成 addIntentParams(intent, params)
+ */
 internal class ActivityGeneration(classBinding: ClassBinding) : IntentBinding(classBinding) {
 
     override fun createFillFieldsMethod() = getBasicFillMethodBuilder()

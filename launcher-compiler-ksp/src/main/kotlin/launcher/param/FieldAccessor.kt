@@ -8,11 +8,14 @@ import com.google.devtools.ksp.symbol.Origin
 import java.util.Locale
 
 /**
- * KSP 版字段访问器，判断字段的 setter/getter 访问方式。
+ * 佛祖保佑         永无BUG
  *
- * 关键差异：Kotlin 属性编译后 backing field 是 private 的，
- * 生成的 Java 代码必须通过 setter/getter 访问。
- * 只有 Java 源文件中的非 private 字段才能直接访问。
+ * @author Created by joker on 2025/5/15
+ *
+ * 判断字段的 setter/getter 访问方式，生成正确的赋值/取值代码。
+ *
+ * Kotlin 属性编译后 backing field 是 private 的，必须通过 setter/getter 访问；
+ * Java 源文件中的非 private 字段可以直接访问。
  */
 class FieldAccessor(
     private val property: KSPropertyDeclaration,
@@ -30,6 +33,7 @@ class FieldAccessor(
         return setterType != FieldAccessType.Inaccessible && getterType != FieldAccessType.Inaccessible
     }
 
+    /** 生成赋值语句，如 "setName(value)" 或 "name = value" */
     fun setToField(whatToSet: String): String = when (setterType) {
         FieldAccessType.Accessible -> "$fieldName = $whatToSet"
         FieldAccessType.ByMethod -> "set${capitalize(fieldName)}($whatToSet)"
@@ -37,6 +41,7 @@ class FieldAccessor(
         FieldAccessType.Inaccessible -> throw Error(launcher.error.Errors.noSetter)
     }
 
+    /** 生成取值表达式，如 "getName()" 或 "name" */
     fun getFieldValue(): String = when (getterType) {
         FieldAccessType.Accessible -> fieldName
         FieldAccessType.ByMethod -> "get${capitalize(fieldName)}()"

@@ -5,7 +5,12 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.ClassKind
 
 /**
- * 支持的参数类型枚举，与 KAPT 版本保持一致
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * 支持的参数类型枚举（26 种），与 KAPT 版本保持一致。
+ * 决定 Intent/Bundle 的 put/get 方法选择。
  */
 enum class ParamType {
     String,
@@ -38,8 +43,10 @@ enum class ParamType {
     SerializableSubtype,
     ParcelableArrayListSubtype;
 
+    /** 是否为 Parcelable/Serializable 子类型（需要强制类型转换） */
     fun typeUsedBySupertype(): kotlin.Boolean = this in listOf(ParcelableSubtype, SerializableSubtype)
 
+    /** 是否为 Java 基本类型（不需要 null 检查） */
     fun isPrimitive(): kotlin.Boolean = when (this) {
         Int, Long, Float, Boolean, Double, Char, Byte, Short -> true
         else -> false
@@ -47,6 +54,10 @@ enum class ParamType {
 
     companion object {
 
+        /**
+         * 类型识别优先级：基本类型 → 数组 → ArrayList → Parcelable/Serializable 子类型。
+         * Nullable 基本类型（如 Int?）映射为 SerializableSubtype（对应 Java boxed 类型）。
+         */
         fun fromType(ksType: KSType): ParamType? {
             val qualifiedName = ksType.declaration.qualifiedName?.asString() ?: return null
 
@@ -126,13 +137,33 @@ enum class ParamType {
             else -> null
         }
 
+        /** 类型继承判断缓存，key = "qualifiedName -> superTypeName" */
+        private val subtypeCache = mutableMapOf<String, Boolean>()
+
         fun isSubtypeOf(ksType: KSType, superTypeName: kotlin.String): kotlin.Boolean {
             val declaration = ksType.declaration
-            if (declaration.qualifiedName?.asString() == superTypeName) return true
+            val qualifiedName = declaration.qualifiedName?.asString() ?: return false
+            val cacheKey = "$qualifiedName -> $superTypeName"
+            subtypeCache[cacheKey]?.let { return it }
+
+            val result = isSubtypeOfInternal(ksType, superTypeName, mutableSetOf())
+            subtypeCache[cacheKey] = result
+            return result
+        }
+
+        private fun isSubtypeOfInternal(
+            ksType: KSType,
+            superTypeName: kotlin.String,
+            visited: MutableSet<kotlin.String>
+        ): kotlin.Boolean {
+            val declaration = ksType.declaration
+            val qualifiedName = declaration.qualifiedName?.asString() ?: return false
+            if (qualifiedName == superTypeName) return true
+            if (!visited.add(qualifiedName)) return false
             if (declaration !is KSClassDeclaration) return false
             return declaration.superTypes.any { superTypeRef ->
                 val resolved = superTypeRef.resolve()
-                isSubtypeOf(resolved, superTypeName)
+                isSubtypeOfInternal(resolved, superTypeName, visited)
             }
         }
     }

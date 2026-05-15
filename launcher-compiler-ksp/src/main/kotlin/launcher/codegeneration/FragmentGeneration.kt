@@ -7,6 +7,15 @@ import launcher.utils.BUNDLE
 import launcher.utils.addIf
 import launcher.utils.doIf
 
+/**
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * Fragment Launcher 代码生成。
+ * 生成：bind(fragment) / newInstance(params) / getBundleFrom(params)
+ * ParentCls 模式下额外生成 addBundleParams(args, params)
+ */
 internal class FragmentGeneration(classBinding: ClassBinding) : ClassGeneration(classBinding) {
 
     override fun createFillFieldsMethod() = getBasicFillMethodBuilder()

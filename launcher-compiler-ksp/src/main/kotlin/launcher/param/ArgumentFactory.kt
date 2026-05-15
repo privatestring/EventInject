@@ -14,13 +14,21 @@ import launcher.utils.FIELD_NAME_END
 import launcher.utils.toTypeName
 
 /**
- * KSP 版参数工厂，解析 @Boom 注解的属性
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * 解析 @Boom 注解的属性，构建 [ArgumentBinding]。
+ * 负责类型判断、访问性校验、key 生成、注解收集。
  */
 class ArgumentFactory(
     private val enclosingClass: KSClassDeclaration,
     private val logger: KSPLogger
 ) {
 
+    /**
+     * 解析单个属性，返回 null 表示校验失败（已输出编译错误）。
+     */
     fun parseArgument(
         property: KSPropertyDeclaration,
         packageName: String,
@@ -47,6 +55,7 @@ class ArgumentFactory(
         val useFieldKey = boomAnnotation?.arguments?.firstOrNull { it.name?.asString() == "useFieldKey" }?.value as? Boolean ?: false
         val desc = boomAnnotation?.arguments?.firstOrNull { it.name?.asString() == "desc" }?.value as? String ?: ""
 
+        // key 优先级：自定义 key > useFieldKey（字段名）> 默认（包名.字段名IntentKey）
         val defaultKey = "$packageName.${name}${FIELD_NAME_END}"
         val key: String = when {
             keyFromAnnotation.isNotEmpty() -> keyFromAnnotation
@@ -63,7 +72,7 @@ class ArgumentFactory(
             .mapNotNull { it.annotationType.resolve().declaration.qualifiedName?.asString() }
             .toMutableList()
 
-        // KSP 源码层面看不到 Kotlin 编译器隐式生成的 @Nullable 注解，需要根据类型 nullability 手动添加
+        // KSP 无法看到 Kotlin 编译器隐式的 @Nullable，需根据 nullability 手动补充
         val isPrimitiveType = paramType.isPrimitive()
         if (ksType.isMarkedNullable && !isPrimitiveType) {
             annotationList.add("org.jetbrains.annotations.Nullable")

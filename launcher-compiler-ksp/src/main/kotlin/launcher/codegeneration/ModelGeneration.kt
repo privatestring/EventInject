@@ -8,6 +8,15 @@ import launcher.utils.BUNDLE
 import launcher.utils.GET_INTENT_METHOD
 import launcher.utils.INTENT
 
+/**
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * Model Launcher 代码生成。
+ * 同时生成 Intent 和 Bundle 两种绑定方式：
+ * bind(model, intent) / bind(model, bundle) / getIntentFrom(context, clazz, params) / getArguments(params)
+ */
 internal class ModelGeneration(classBinding: ClassBinding) : IntentBinding(classBinding) {
 
     private var isFirst = true

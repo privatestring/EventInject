@@ -8,7 +8,8 @@ import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 
 /**
- * 将 KSType 转换为 JavaPoet 的 TypeName
+ * 将 KSP 的 KSType 转换为 JavaPoet 的 TypeName。
+ * 处理 Kotlin→Java 类型映射、泛型、内部类、nullable boxing 等。
  */
 fun KSType.toTypeName(): TypeName {
     val qualifiedName = declaration.qualifiedName?.asString() ?: return ClassName.get("java.lang", "Object")
@@ -148,9 +149,7 @@ fun KSType.toTypeName(): TypeName {
 }
 
 /**
- * 解析 ClassName，正确处理内部类。
- * JavaPoet 需要 ClassName.get(packageName, outerClass, innerClass...) 格式来正确生成
- * `import OuterClass` + 使用 `OuterClass.InnerClass` 的代码。
+ * 解析 ClassName，正确处理内部类（JavaPoet 需要 OuterClass.InnerClass 格式）。
  */
 private fun resolveClassName(classDecl: KSClassDeclaration?, qualifiedName: String): ClassName {
     if (classDecl != null) {

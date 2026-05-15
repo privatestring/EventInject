@@ -10,7 +10,12 @@ import launcher.utils.START_METHOD_NAME
 import launcher.utils.checkNotBox
 
 /**
- * Intent 绑定基类，Activity/Model/BroadcastReceiver 共用
+ * 佛祖保佑         永无BUG
+ *
+ * @author Created by joker on 2025/5/15
+ *
+ * Intent 绑定基类，Activity/Model/BroadcastReceiver 共用。
+ * 提供 Intent 的 putExtra/getXxxExtra 代码生成逻辑。
  */
 internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGeneration(classBinding) {
 

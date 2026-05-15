@@ -4,6 +4,7 @@ import com.squareup.javapoet.TypeName
 import launcher.param.ParamType
 import launcher.utils.checkNotBox
 
+/** Bundle 写入方法映射 */
 fun getBundleSetterFor(type: ParamType) = when (type) {
     ParamType.String -> "putString"
     ParamType.Int -> "putInt"
@@ -33,6 +34,7 @@ fun getBundleSetterFor(type: ParamType) = when (type) {
     ParamType.ParcelableArrayListSubtype -> "putParcelableArrayList"
 }
 
+/** Bundle 读取方法映射 */
 fun getBundleGetterCall(paramType: ParamType) = when (paramType) {
     ParamType.String -> "getString"
     ParamType.Int -> "getInt"
@@ -62,12 +64,14 @@ fun getBundleGetterCall(paramType: ParamType) = when (paramType) {
     ParamType.ParcelableArrayListSubtype -> "getParcelableArrayList"
 }
 
+/** 生成 Bundle 读取表达式，Parcelable/Serializable 需要强转 */
 fun getBundleGetter(bundleName: String, paramType: ParamType, typeName: TypeName, keyName: String): String {
     val bundleGetterCall = getBundleGetterCall(paramType)
     val getArgumentValue = "$bundleName.$bundleGetterCall($keyName)"
     return if (paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
 }
 
+/** Intent 写入方法映射（ArrayList 类型有专用方法，其余统一用 putExtra） */
 fun getPutArgumentToIntentMethodName(paramType: ParamType) = when (paramType) {
     ParamType.IntegerArrayList -> "putIntegerArrayListExtra"
     ParamType.CharSequenceArrayList -> "putCharSequenceArrayListExtra"
@@ -76,12 +80,14 @@ fun getPutArgumentToIntentMethodName(paramType: ParamType) = when (paramType) {
     else -> "putExtra"
 }
 
+/** 生成 Intent 读取表达式，Parcelable/Serializable 需要强转 */
 fun getIntentGetterFor(paramType: ParamType, typeName: TypeName, key: String): String {
     val getter = getIntentGetterForParamType(paramType, key)
     val getArgumentValue = "intent.$getter"
     return if (paramType.typeUsedBySupertype()) "($typeName) $getArgumentValue" else getArgumentValue
 }
 
+/** Intent 读取方法映射（含默认值） */
 fun getIntentGetterForParamType(paramType: ParamType, key: String) = when (paramType) {
     ParamType.String -> "getStringExtra($key)"
     ParamType.Int -> "getIntExtra($key, 0)"
