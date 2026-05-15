@@ -2,4 +2,4 @@ package com.webull.library.broker.common.home.page.fragment.orders.recurring.bea
 
 import java.io.Serializable
 
-class RecurringDetailInfo : Serializable
+open class RecurringDetailInfo : Serializable

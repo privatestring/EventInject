@@ -2,4 +2,4 @@ package com.webull.wefolio.pojo
 
 import java.io.Serializable
 
-class TradeWefolioInfo : Serializable
+open class TradeWefolioInfo : Serializable

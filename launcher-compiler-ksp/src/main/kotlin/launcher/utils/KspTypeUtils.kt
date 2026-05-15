@@ -12,7 +12,17 @@ import com.squareup.javapoet.TypeName
  * 处理 Kotlin→Java 类型映射、泛型、内部类、nullable boxing 等。
  */
 fun KSType.toTypeName(): TypeName {
-    val qualifiedName = declaration.qualifiedName?.asString() ?: return ClassName.get("java.lang", "Object")
+    val qualifiedName = declaration.qualifiedName?.asString()
+        ?: run {
+            // qualifiedName 为 null 时（error type），尝试从 packageName + simpleName 拼出类名
+            val simpleName = declaration.simpleName.asString()
+            val packageName = declaration.packageName.asString()
+            return if (simpleName.isNotEmpty() && packageName.isNotEmpty()) {
+                ClassName.get(packageName, simpleName)
+            } else {
+                ClassName.get("java.lang", "Object")
+            }
+        }
     val nullable = isMarkedNullable
 
     // 基本类型映射（Kotlin → Java）
