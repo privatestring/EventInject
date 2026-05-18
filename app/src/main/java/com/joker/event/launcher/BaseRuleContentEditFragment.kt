@@ -5,12 +5,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModel
+import androidx.viewbinding.ViewBinding
 import com.webull.alert.common.viewdata.AlertTypeBean
 import com.webull.alert.common.bean.BaseWarningRuleBean
 import com.webull.commonmodule.bean.TickerKey
 import launcher.Boom
 
-open class BaseRuleContentEditFragment : Fragment() {
+open class BaseRuleContentEditFragment<VB : ViewBinding, VM : ViewModel> : Fragment() {
     @Boom(index = 0, desc = "当前标的")
     var tickerKey: TickerKey = TickerKey()
     @Boom(index = 1, desc = "当前编辑的盯盘类型")

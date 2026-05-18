@@ -65,9 +65,16 @@ class ArgumentFactory(
 
         val typeName: TypeName = ksType.toTypeName()
 
-        // 收集非 @Boom 和非 @NotNull 的注解
+        // 收集非 @Boom、非 @NotNull、非 @Suppress 类的注解
+        // @Suppress / @SuppressWarnings 是编译器指令，带必需参数但无法在生成的 Java 代码中正确传递
         val annotationList = property.annotations
-            .filter { it.shortName.asString() != Boom::class.simpleName && !it.shortName.asString().contains("NotNull") }
+            .filter {
+                val shortName = it.shortName.asString()
+                shortName != Boom::class.simpleName
+                    && !shortName.contains("NotNull")
+                    && shortName != "Suppress"
+                    && shortName != "SuppressWarnings"
+            }
             .mapNotNull { it.annotationType.resolve().declaration.qualifiedName?.asString() }
             .toMutableList()
 

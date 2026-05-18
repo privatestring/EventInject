@@ -24,7 +24,7 @@ import com.squareup.kotlinpoet.buildCodeBlock
  *
  * 功能五：TradeInterface 交易服务工厂 代码生成器（KotlinPoet 版本）。
  *
- * 收集所有 @TradeInterface 注解的实现类，生成 TradeInterfaceFactory{moduleName} object。
+ * 收集所有 @TradeInterface 注解的实现类，生成 TradeInterfaceFactory{moduleName} class。
  * 运行时通过接口 Class 获取对应实现类实例，实现编译时的服务定位器模式。
  *
  * 需要编译参数 module_name，未配置时不执行。
@@ -33,8 +33,8 @@ import com.squareup.kotlinpoet.buildCodeBlock
  * ```kotlin
  * package com.webull.trade.services
  *
- * object TradeInterfaceFactory{ModuleName} : ITradeInterfaceFactory {
- *     @JvmStatic override fun <T : ITradeInterface> createInstance(clazz: Class<out T>): ITradeInterface? { ... }
+ * class TradeInterfaceFactory{ModuleName} : ITradeInterfaceFactory {
+ *     override fun <T : ITradeInterface> createInstance(clazz: Class<out T>): ITradeInterface? { ... }
  *     private fun <T : ITradeInterface> createInnerInstance(clazz: Class<out T>): ITradeInterface? { ... }
  * }
  * ```
@@ -138,7 +138,7 @@ class TradeInterfaceGeneration(
     }
 
     private fun createFactoryObject(className: String): TypeSpec {
-        return TypeSpec.objectBuilder(className)
+        return TypeSpec.classBuilder(className)
             .addKdoc("自动生成的 TradeInterfaceFactory 类\n由 TradeInterface 注解处理器生成\n")
             .addSuperinterface(I_TRADE_INTERFACE_FACTORY)
             .addFunction(buildCreateInstanceMethod())

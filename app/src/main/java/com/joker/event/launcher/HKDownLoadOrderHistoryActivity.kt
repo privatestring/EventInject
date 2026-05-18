@@ -5,8 +5,6 @@ import android.os.Bundle
 import com.webull.library.broker.common.home.page.fragment.history.HistoryType
 import com.webull.library.broker.webull.account.model.BaseGetCapitalDetailsModel
 import com.webull.library.tradenetwork.bean.AccountInfo
-import java.util.ArrayList
-import java.util.HashMap
 import launcher.Boom
 
 class HKDownLoadOrderHistoryActivity : Activity() {
@@ -20,7 +18,7 @@ class HKDownLoadOrderHistoryActivity : Activity() {
     var fundsConditions: ArrayList<BaseGetCapitalDetailsModel.Condition> = arrayListOf()
 
     @Boom(index = 3)
-    var params: HashMap<String, String>? = null
+    var params : HashMap<String, Any?>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -13,7 +13,7 @@ import launcher.Boom
 
 class SquareFeedFilterDialog : DialogFragment() {
     @Boom(index = 0)
-    var filterList: HashSet<String> = hashSetOf()
+    var filterList = hashSetOf<String>()
 
     @Boom(index = 1)
     var allTypes: ArrayList<SquareFeedFilter> = arrayListOf()

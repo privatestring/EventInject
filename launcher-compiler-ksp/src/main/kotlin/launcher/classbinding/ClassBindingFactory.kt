@@ -5,6 +5,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.TypeName
 import launcher.Boom
 import launcher.IncludeParentBoom
 import launcher.MakeResult
@@ -31,9 +32,14 @@ internal class ClassBindingFactory(
     fun create(): ClassBinding? {
         try {
             val knownClassType = KnownClassType.getByType(classDeclaration)
-            val targetTypeName = classDeclaration.asType(emptyList()).toTypeName()
             val packageName = classDeclaration.packageName.asString()
             val simpleName = classDeclaration.simpleName.asString()
+            // 泛型类使用 raw type（ClassName），避免 K2 编译器对泛型参数的严格类型匹配报错
+            val targetTypeName: TypeName = if (classDeclaration.typeParameters.isNotEmpty()) {
+                ClassName.get(packageName, simpleName)
+            } else {
+                classDeclaration.asType(emptyList()).toTypeName()
+            }
             val bindingClassName = ClassName.get(packageName, simpleName + CLASS_NAME_END)
 
             val argumentFactory = ArgumentFactory(classDeclaration, logger)

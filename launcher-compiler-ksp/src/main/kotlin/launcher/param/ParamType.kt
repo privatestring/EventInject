@@ -132,13 +132,34 @@ enum class ParamType {
             }
         }
 
+        /** Kotlin/Java 标准库中已知实现 Serializable 的集合类型，KSP/K2 可能无法解析其 superTypes 继承链 */
+        private val knownSerializableTypes = setOf(
+            "kotlin.collections.HashSet", "java.util.HashSet",
+            "kotlin.collections.LinkedHashSet", "java.util.LinkedHashSet",
+            "kotlin.collections.HashMap", "java.util.HashMap",
+            "kotlin.collections.LinkedHashMap", "java.util.LinkedHashMap",
+            "java.util.TreeSet", "java.util.TreeMap",
+            "java.util.LinkedList",
+            "kotlin.collections.ArrayList", "java.util.ArrayList",
+            "kotlin.Pair", "kotlin.Triple"
+        )
+
         private fun getBySupertype(ksType: KSType): ParamType? {
+            val declaration = ksType.declaration
+            val qualifiedName = declaration.qualifiedName?.asString()
+
             // 枚举类隐式实现 Serializable，但 KSP 对 kotlin.Enum 的 superTypes 解析可能不完整，
             // 导致递归查找时找不到 java.io.Serializable，需要在此显式判断。
-            val declaration = ksType.declaration
             if (declaration is KSClassDeclaration && declaration.classKind == ClassKind.ENUM_CLASS) {
                 return SerializableSubtype
             }
+
+            // Kotlin/Java 标准集合类型隐式实现 Serializable，KSP/K2 可能无法正确解析其继承链，
+            // 需要在此显式判断（与枚举类同理）。
+            if (qualifiedName in knownSerializableTypes) {
+                return SerializableSubtype
+            }
+
             return when {
                 isSubtypeOf(ksType, "android.os.Parcelable") -> ParcelableSubtype
                 isSubtypeOf(ksType, "java.io.Serializable") -> SerializableSubtype

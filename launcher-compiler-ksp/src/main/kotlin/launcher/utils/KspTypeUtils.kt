@@ -100,6 +100,7 @@ fun KSType.toTypeName(): TypeName {
         "kotlin.Short" -> TypeName.SHORT
         "kotlin.Unit" -> TypeName.VOID
         "kotlin.Nothing" -> TypeName.VOID
+        "kotlin.Any", "java.lang.Object" -> ClassName.get("java.lang", "Object")
         "kotlin.String", "java.lang.String" -> ClassName.get("java.lang", "String")
         "kotlin.CharSequence", "java.lang.CharSequence" -> ClassName.get("java.lang", "CharSequence")
         "kotlin.IntArray" -> ArrayTypeName.of(TypeName.INT)
