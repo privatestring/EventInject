@@ -72,6 +72,19 @@ internal abstract class ClassGeneration(val classBinding: ClassBinding) {
         }
     }
 
+    /**
+     * 为方法添加参数 Javadoc（@param 注释）。
+     * 优先使用 @Boom.desc，为空时 fallback 到属性 KDoc 注释，两者都为空则跳过。
+     */
+    protected fun MethodSpec.Builder.addParamJavadoc(variant: List<ArgumentBinding>) = apply {
+        val documented = variant.filter { it.description.isNotEmpty() }
+        if (documented.isNotEmpty()) {
+            documented.forEach { arg ->
+                addJavadoc("@param ${arg.name} ${arg.description}\n")
+            }
+        }
+    }
+
     /** 生成 Bundle.putXxx 语句，引用类型加 null 检查 */
     protected fun MethodSpec.Builder.addSaveBundleStatements(
         bundleName: String,

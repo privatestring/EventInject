@@ -27,6 +27,7 @@ internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGenerat
         .build()!!
 
     protected fun createGetIntentMethod(variant: List<ArgumentBinding>) = builderWithCreationBasicFields(GET_INTENT_METHOD)
+        .addParamJavadoc(variant)
         .addArgParameters(variant)
         .returns(INTENT)
         .addStatement("\$T intent = new Intent(context, \$T.class)", INTENT, classBinding.targetTypeName)
@@ -77,6 +78,7 @@ internal abstract class IntentBinding(classBinding: ClassBinding) : ClassGenerat
 
     protected fun createGetIntentStarter(starterFunc: String, variant: List<ArgumentBinding>) =
         builderWithCreationBasicFields(START_METHOD_NAME)
+            .addParamJavadoc(variant)
             .addArgParameters(variant)
             .addStatement("if(context == null) return")
             .addGetIntentStatement(variant)

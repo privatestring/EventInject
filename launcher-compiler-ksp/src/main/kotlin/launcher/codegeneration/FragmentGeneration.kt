@@ -33,6 +33,7 @@ internal class FragmentGeneration(classBinding: ClassBinding) : ClassGeneration(
     ).addIf(classBinding.isParentClass, addParamsMethod(variant))
 
     private fun getArguments(variant: List<ArgumentBinding>) = builderWithCreationBasicFieldsNoContext("getBundleFrom")
+        .addParamJavadoc(variant)
         .addArgParameters(variant)
         .returns(BUNDLE)
         .addStatement("\$T args = new Bundle()", BUNDLE)
@@ -49,7 +50,7 @@ internal class FragmentGeneration(classBinding: ClassBinding) : ClassGeneration(
         .build()
 
     private fun createGetFragmentMethod(variant: List<ArgumentBinding>) = builderWithCreationBasicFieldsNoContext("newInstance")
-        .addJavadoc("This is Method for new Fragment and put field: ${variant.joinToString { it.typeName.toString() + " = " + it.name + "  " + it.annotationList.joinToString("-") }}\n")
+        .addParamJavadoc(variant)
         .addArgParameters(variant)
         .returns(classBinding.targetTypeName)
         .addGetFragmentCode(variant)

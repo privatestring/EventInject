@@ -127,14 +127,14 @@ internal class RouterGeneration(classBinding: ClassBinding) : ClassGeneration(cl
     /** 校验 @Boom.desc 必填，并生成 @param Javadoc */
     private fun MethodSpec.Builder.addDocument(variant: List<ArgumentBinding>) = apply {
         variant.forEach {
-            if (it.desc.isEmpty()) {
+            if (it.description.isEmpty()) {
                 throw IllegalArgumentException(
                     """
                     
                     ============================================================
                     
                     ${classBinding.targetTypeName}
-                    ${it.name} 跨模块需要添加 desc 的描述
+                    ${it.name} 跨模块需要添加 desc 的描述（@Boom.desc 或属性 KDoc 注释）
                     
                     
                     ============================================================
@@ -144,7 +144,7 @@ internal class RouterGeneration(classBinding: ClassBinding) : ClassGeneration(cl
             }
         }
         if (variant.isNotEmpty()) {
-            addJavadoc(variant.joinToString("\n") { "@param ${it.name} ${it.desc}" })
+            addJavadoc(variant.joinToString("\n") { "@param ${it.name} ${it.description}" })
         }
     }
 

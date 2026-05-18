@@ -20,10 +20,14 @@ class ArgumentBinding(
     val isOptional: Boolean,             // @Boom.isOptional，可选参数会生成重载
     val accessor: FieldAccessor,         // 字段读写方式（直接/setter/getter）
     val annotationList: List<String>,    // 字段上的其他注解（排除 @Boom/@NotNull）
-    val desc: String                     // @Boom.desc，Router 跳转时必填
+    val desc: String,                    // @Boom.desc，Router 跳转时必填
+    val docString: String = ""           // 属性的 KDoc 注释，作为 desc 的 fallback
 ) {
     /** 生成的常量名，如 userName → USER_NAME_INTENT_KEY */
     val fieldName: String by lazy { camelCaseToUppercaseUnderscore(name) + "_INTENT_KEY" }
+
+    /** 参数描述：优先使用 @Boom.desc，为空时 fallback 到属性 KDoc 注释 */
+    val description: String get() = desc.ifEmpty { docString }
 
     /** 将注解全限定名转为 JavaPoet ClassName，用于生成参数注解 */
     val annotationCls: List<ClassName> by lazy {

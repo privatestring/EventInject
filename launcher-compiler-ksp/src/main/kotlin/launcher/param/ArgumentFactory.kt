@@ -84,7 +84,10 @@ class ArgumentFactory(
             annotationList.add("org.jetbrains.annotations.Nullable")
         }
 
-        return ArgumentBinding(name, key, paramType, typeName, index, isOptional, accessor, annotationList, desc)
+        // 提取属性的 KDoc 注释，作为 @Boom.desc 的 fallback
+        val docString = property.docString?.trim() ?: ""
+
+        return ArgumentBinding(name, key, paramType, typeName, index, isOptional, accessor, annotationList, desc, docString)
     }
 
     private fun getFieldError(

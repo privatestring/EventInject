@@ -53,6 +53,7 @@ internal class ActivityGeneration(classBinding: ClassBinding) : IntentBinding(cl
     private fun createStartActivityForResultMethod(variant: List<ArgumentBinding>) =
         builderWithCreationBasicFieldsNoContext(START_RESULT_METHOD_NAME)
             .addJavadoc("This is Method for StartActivity and get Result\n")
+            .addParamJavadoc(variant)
             .addParameter(ACTIVITY, "context")
             .addArgParameters(variant)
             .addParameter(TypeName.INT, "result")
