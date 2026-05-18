@@ -3,7 +3,7 @@ package com.joker.event.launcher
 import com.webull.commonmodule.jump.action.ParamConsts
 import launcher.Boom
 
-class RanksTemplateIntentParams {
+open class RanksTemplateIntentParams {
     @Boom(index = 0, key = "rankId")
     var rankId: String? = null
 

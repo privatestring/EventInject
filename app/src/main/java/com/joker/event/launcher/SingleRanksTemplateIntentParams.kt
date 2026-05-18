@@ -1,10 +1,17 @@
 package com.joker.event.launcher
 
-import com.webull.commonmodule.jump.action.ParamConsts
 import com.webull.rankstemplate.pojo.RanksData
 import launcher.Boom
+import launcher.IncludeParentBoom
 
-class SingleRanksTemplateIntentParams {
-    @Boom(index = 1, key = "cardData", isOptional = true)
+@IncludeParentBoom
+class SingleRanksTemplateIntentParams : RanksTemplateIntentParams() {
+    @Boom(index = 6, key = "cardData", isOptional = true)
     var cardData: RanksData? = null
+}
+
+
+@IncludeParentBoom
+class SingleRanksTemplatexxx : RanksTemplateIntentParams() {
+    
 }

@@ -76,6 +76,15 @@ class LauncherKspProcessor(
             if (symbol is KSClassDeclaration) classesToProcess += symbol
         }
 
+        // 扫描 @IncludeParentBoom 类
+        resolver.getSymbolsWithAnnotation(IncludeParentBoom::class.qualifiedName!!).forEach { symbol ->
+            if (!symbol.validate()) {
+                unprocessed += symbol
+                return@forEach
+            }
+            if (symbol is KSClassDeclaration) classesToProcess += symbol
+        }
+
         // 扫描 @Router 类
         resolver.getSymbolsWithAnnotation(Router::class.qualifiedName!!).forEach { symbol ->
             if (!symbol.validate()) {

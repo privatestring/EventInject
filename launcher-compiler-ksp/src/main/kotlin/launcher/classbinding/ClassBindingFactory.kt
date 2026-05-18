@@ -1,10 +1,12 @@
 package launcher.classbinding
 
+import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.javapoet.ClassName
 import launcher.Boom
+import launcher.IncludeParentBoom
 import launcher.MakeResult
 import launcher.ParentCls
 import launcher.Router
@@ -36,8 +38,19 @@ internal class ClassBindingFactory(
 
             val argumentFactory = ArgumentFactory(classDeclaration, logger)
 
-            // 收集所有带 @Boom 注解的属性
-            val argumentBindings = classDeclaration.getAllProperties()
+            // 检查是否标注了 @IncludeParentBoom（包含父类 @Boom 属性）
+            val includeParentBoom = classDeclaration.annotations.any {
+                it.shortName.asString() == IncludeParentBoom::class.simpleName
+            }
+
+            // 收集 @Boom 属性：有 @IncludeParentBoom 则包含父类，否则只收集当前类（与 KAPT 行为一致）
+            val properties = if (includeParentBoom) {
+                classDeclaration.getAllProperties()
+            } else {
+                classDeclaration.getDeclaredProperties()
+            }
+
+            val argumentBindings = properties
                 .filter { prop -> prop.annotations.any { it.shortName.asString() == Boom::class.simpleName } }
                 .mapNotNull { prop -> argumentFactory.parseArgument(prop, packageName, knownClassType) }
                 .sortedBy { it.index }
