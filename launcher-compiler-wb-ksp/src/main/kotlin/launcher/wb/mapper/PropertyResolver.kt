@@ -1,6 +1,9 @@
 package launcher.wb.mapper
 
+import com.google.devtools.ksp.getDeclaredFunctions
+import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
@@ -25,12 +28,6 @@ import com.google.devtools.ksp.symbol.Origin
  */
 class PropertyResolver(private val logger: KSPLogger) {
 
-    /**
-     * 属性解析缓存。生命周期与 Processor 实例一致：
-     * - 全量编译：Processor 新建，缓存为空
-     * - 增量编译：KSP 会重新创建 Processor 实例，缓存自动失效
-     * 因此无需手动清理。
-     */
     private val readableCache = mutableMapOf<String, Map<String, ReadableProperty>>()
     private val writableCache = mutableMapOf<String, Map<String, WritableProperty>>()
     private val writableFieldsCache = mutableMapOf<String, Map<String, WritableField>>()

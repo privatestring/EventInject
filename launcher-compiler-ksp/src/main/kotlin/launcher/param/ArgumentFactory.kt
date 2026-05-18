@@ -35,8 +35,9 @@ class ArgumentFactory(
     ): ArgumentBinding? {
         val ksType = property.type.resolve()
         val paramType = ParamType.fromType(ksType)
+        val accessor = FieldAccessor(property, enclosingClass)
 
-        val error = getFieldError(property, knownClassType, paramType)
+        val error = getFieldError(property, knownClassType, paramType, accessor)
         if (error != null) {
             logger.error("@Boom ${enclosingClass.qualifiedName?.asString()} $error (${property.simpleName.asString()})", property)
             return null
@@ -63,7 +64,6 @@ class ArgumentFactory(
         }
 
         val typeName: TypeName = ksType.toTypeName()
-        val accessor = FieldAccessor(property, enclosingClass)
 
         // 收集非 @Boom 和非 @NotNull 的注解
         val annotationList = property.annotations
@@ -83,12 +83,13 @@ class ArgumentFactory(
     private fun getFieldError(
         property: KSPropertyDeclaration,
         knownClassType: KnownClassType,
-        paramType: ParamType?
+        paramType: ParamType?,
+        accessor: FieldAccessor
     ): String? = when {
         enclosingClass.classKind != ClassKind.CLASS -> Errors.notAClass
         enclosingClass.modifiers.contains(Modifier.PRIVATE) -> Errors.privateClass
         paramType == null -> Errors.notSupportedType
-        !FieldAccessor(property, enclosingClass).isAccessible() -> Errors.inaccessibleField
+        !accessor.isAccessible() -> Errors.inaccessibleField
         paramType.typeUsedBySupertype() && knownClassType == KnownClassType.BroadcastReceiver -> Errors.notBasicTypeInReceiver
         else -> null
     }

@@ -1,7 +1,6 @@
 package launcher.wb.mapper
 
 import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -81,8 +80,7 @@ class MapperGeneration(
         val javaFile = MapperCodeGeneration(descriptor, propertyResolver, logger).brewJava()
 
         // 写入文件
-        val sourceFiles = listOfNotNull(mapperElement.containingFile)
-        val dependencies = Dependencies(aggregating = false, *sourceFiles.toTypedArray())
+        val dependencies = buildDependencies(aggregating = false, listOf(mapperElement))
 
         val file = codeGenerator.createNewFile(
             dependencies = dependencies,

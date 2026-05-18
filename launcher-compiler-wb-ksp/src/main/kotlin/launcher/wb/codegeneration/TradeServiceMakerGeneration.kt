@@ -12,6 +12,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.TypeSpec
 import launcher.TradeServiceMaker
 
@@ -52,8 +53,8 @@ class TradeServiceMakerGeneration(
     /** 收集到的注解数据 */
     private val annotatedData = mutableListOf<TradeServiceMakerData>()
 
-    /** 缓存扫描结果，在 collect 阶段完成包扫描 */
-    private val scanResults = mutableListOf<Pair<TradeServiceMakerData, List<KSClassDeclaration>>>()
+    /** 扫描结果：每个注解对应的顶层接口列表 */
+    private val scanResults = mutableListOf<TradeServiceMakerScanResult>()
 
     override fun collect(resolver: Resolver): List<KSAnnotated> {
         val unprocessed = mutableListOf<KSAnnotated>()
@@ -67,14 +68,12 @@ class TradeServiceMakerGeneration(
                 val data = extractAnnotationData(symbol)
                 if (data != null) {
                     annotatedData += data
+                    // 在 collect 阶段完成包扫描（Resolver 仅在 process 期间有效）
+                    val allSubInterfaces = findAllSubInterfaces(data, resolver)
+                    val topLevelInterfaces = filterTopLevelInterfaces(allSubInterfaces)
+                    scanResults += TradeServiceMakerScanResult(data, topLevelInterfaces, allSubInterfaces)
                 }
             }
-        }
-
-        // 在 collect 阶段完成包扫描，避免跨阶段持有 Resolver 引用
-        annotatedData.forEach { data ->
-            val subInterfaces = findAllSubInterfaces(data, resolver)
-            scanResults += data to subInterfaces
         }
 
         return unprocessed
@@ -83,31 +82,31 @@ class TradeServiceMakerGeneration(
     override fun hasDataToGenerate(): Boolean = scanResults.isNotEmpty()
 
     override fun generate() {
-        for ((data, allSubInterfaces) in scanResults) {
-            generateForAnnotation(data, allSubInterfaces)
+        for (result in scanResults) {
+            generateForResult(result)
         }
     }
 
     /**
-     * 为单个 @TradeServiceMaker 注解生成聚合接口
+     * 为单个扫描结果生成聚合接口
      */
-    private fun generateForAnnotation(data: TradeServiceMakerData, allSubInterfaces: List<KSClassDeclaration>) {
+    private fun generateForResult(result: TradeServiceMakerScanResult) {
+        val data = result.data
+        val name = data.targetClassName
 
         logger.info(
-            "TradeServiceAggregator: Total interfaces found: ${allSubInterfaces.size}"
+            "TradeServiceAggregator: Total interfaces found: ${result.allSubInterfaces.size}"
         )
-
-        // 2. 筛选顶层接口
-        val topLevelInterfaces = filterTopLevelInterfaces(allSubInterfaces)
-
         logger.info(
-            "TradeServiceAggregator: Top-level interfaces: ${topLevelInterfaces.size}"
+            "TradeServiceAggregator: Top-level interfaces: ${result.topLevelInterfaces.size}"
         )
 
-        // 3. 生成代码
-        val fileSpec = brewKotlin(data, topLevelInterfaces)
-        val sourceFiles = (allSubInterfaces + listOfNotNull(data.annotatedClass))
+        val fileSpec = brewKotlin(data, result.topLevelInterfaces)
+        val sourceFiles = (result.allSubInterfaces + listOfNotNull(data.annotatedClass))
             .mapNotNull { it.containingFile }
+        if (sourceFiles.isEmpty()) {
+            logger.warn("TradeServiceAggregator: No source files for dependencies, incremental compilation may not work.")
+        }
         writeKotlinFile(
             fileSpec = fileSpec,
             dependencies = Dependencies(aggregating = true, *sourceFiles.toTypedArray())
@@ -343,5 +342,11 @@ class TradeServiceMakerGeneration(
         val additionalInterfaces: List<KSType>,
         val targetPackageName: String,
         val targetClassName: String
+    )
+
+    private data class TradeServiceMakerScanResult(
+        val data: TradeServiceMakerData,
+        val topLevelInterfaces: List<KSClassDeclaration>,
+        val allSubInterfaces: List<KSClassDeclaration>
     )
 }

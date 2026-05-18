@@ -1,7 +1,6 @@
 package launcher.wb.codegeneration
 
 import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -52,12 +51,17 @@ class TradeInterfaceGeneration(
     /** 内部接口映射：接口全限定名 → 实现类声明 */
     private val innerInterfaces = mutableMapOf<String, KSClassDeclaration>()
 
-    /** module_name 编译参数 */
-    private val moduleName: String? get() = options["module_name"]
+    /** 模块名：优先使用 ksp arg 配置的 module_name，未配置则从源文件路径自动提取 */
+    private var moduleName: String? = null
 
     override fun collect(resolver: Resolver): List<KSAnnotated> {
-        // 未配置 module_name 时静默跳过
-        if (moduleName.isNullOrEmpty()) return emptyList()
+        // 优先使用 ksp arg 配置的 module_name
+        if (moduleName == null) {
+            val configured = options["module_name"]
+            if (!configured.isNullOrEmpty()) {
+                moduleName = configured
+            }
+        }
 
         val unprocessed = mutableListOf<KSAnnotated>()
 
@@ -67,6 +71,10 @@ class TradeInterfaceGeneration(
                 return@forEach
             }
             if (symbol is KSClassDeclaration) {
+                // 未通过 ksp arg 配置时，从源文件路径自动提取模块名
+                if (moduleName == null) {
+                    moduleName = extractModuleName(symbol)
+                }
                 processAnnotatedClass(symbol)
             }
         }
@@ -80,11 +88,10 @@ class TradeInterfaceGeneration(
     override fun generate() {
         val name = moduleName ?: return
         val fileSpec = brewKotlin(name)
-        val sourceFiles = (regularInterfaces.values + innerInterfaces.values)
-            .mapNotNull { it.containingFile }
+        val allClasses = (regularInterfaces.values + innerInterfaces.values).toList()
         writeKotlinFile(
             fileSpec = fileSpec,
-            dependencies = Dependencies(aggregating = true, *sourceFiles.toTypedArray())
+            dependencies = buildDependencies(aggregating = true, allClasses)
         )
     }
 
@@ -197,6 +204,28 @@ class TradeInterfaceGeneration(
                 endControlFlow()
             })
             .build()
+    }
+
+    /**
+     * 从 KSClassDeclaration 的源文件路径中提取模块名，并转为 PascalCase。
+     * 路径格式约定：.../模块名/src/main/...
+     * 例如：trade-order → TradeOrder, TradeModule → TradeModule
+     */
+    private fun extractModuleName(classDecl: KSClassDeclaration): String? {
+        val filePath = classDecl.containingFile?.filePath ?: return null
+        val srcIndex = filePath.indexOf("/src/")
+        if (srcIndex > 0) {
+            val beforeSrc = filePath.substring(0, srcIndex)
+            val rawName = beforeSrc.substringAfterLast("/")
+            return rawName.toPascalCase()
+        }
+        return null
+    }
+
+    /** 将模块名转为 PascalCase：trade-order → TradeOrder */
+    private fun String.toPascalCase(): String {
+        return split("-", "_")
+            .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
     }
 
     companion object {

@@ -5,6 +5,7 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.squareup.kotlinpoet.FileSpec
 
 /**
@@ -44,7 +45,8 @@ abstract class BaseGeneration(
     abstract fun hasDataToGenerate(): Boolean
 
     /**
-     * 工具方法：将 FileSpec 写入 KSP CodeGenerator
+     * 工具方法：将 FileSpec 写入 KSP CodeGenerator。
+     * 如果 dependencies 的 sources 为空，记录 warning（增量编译可能失效）。
      */
     protected fun writeKotlinFile(
         fileSpec: FileSpec,
@@ -59,5 +61,19 @@ abstract class BaseGeneration(
         file.writer().use { writer ->
             fileSpec.writeTo(writer)
         }
+    }
+
+    /**
+     * 工具方法：从类声明列表中构建 Dependencies，自动过滤 null 并检查空数组。
+     */
+    protected fun buildDependencies(
+        aggregating: Boolean,
+        classes: Collection<KSClassDeclaration>
+    ): Dependencies {
+        val sourceFiles = classes.mapNotNull { it.containingFile }
+        if (sourceFiles.isEmpty()) {
+            logger.warn("No source files found for dependencies, incremental compilation may not work correctly.")
+        }
+        return Dependencies(aggregating, *sourceFiles.toTypedArray())
     }
 }

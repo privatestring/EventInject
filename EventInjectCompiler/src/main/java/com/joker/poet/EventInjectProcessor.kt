@@ -25,12 +25,15 @@ class EventInjectProcessor(
     private val logger: KSPLogger
 ) : SymbolProcessor {
 
+    /** 防止多轮处理时重复生成 */
+    private var generated = false
+
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val symbols = resolver.getSymbolsWithAnnotation("com.joker.annotation.EventBridge")
-        val unprocessed = symbols.filter { !it.validate() }.toList()
-        val elements = symbols.filter { it.validate() && it is KSClassDeclaration }
-            .map { it as KSClassDeclaration }
-            .toList()
+        if (generated) return emptyList()
+
+        val symbols = resolver.getSymbolsWithAnnotation("com.joker.annotation.EventBridge").toList()
+        val (validSymbols, unprocessed) = symbols.partition { it.validate() }
+        val elements = validSymbols.filterIsInstance<KSClassDeclaration>()
 
         if (elements.isEmpty()) return unprocessed
 
@@ -87,6 +90,7 @@ class EventInjectProcessor(
             fileSpec.writeTo(writer)
         }
 
+        generated = true
         return unprocessed
     }
 }

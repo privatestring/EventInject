@@ -1,7 +1,6 @@
 package launcher.wb.codegeneration
 
 import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -83,10 +82,9 @@ class MarketViewRouteGeneration(
         validateUniqueKeys()
 
         val fileSpec = brewKotlin()
-        val sourceFiles = viewClasses.mapNotNull { it.containingFile }
         writeKotlinFile(
             fileSpec = fileSpec,
-            dependencies = Dependencies(aggregating = true, *sourceFiles.toTypedArray())
+            dependencies = buildDependencies(aggregating = true, viewClasses)
         )
     }
 

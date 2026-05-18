@@ -8,6 +8,69 @@ import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 
 /**
+ * 公共的类型继承判断工具，统一缓存策略。
+ * 供 ParamType、KnownClassType 等模块复用，避免重复实现。
+ */
+object SubtypeChecker {
+
+    /** 类型继承判断缓存，key = "qualifiedName -> superTypeName"。KSP 单轮编译内有效。 */
+    private val cache = HashMap<String, Boolean>()
+
+    fun isSubtypeOf(ksType: KSType, superTypeName: String): Boolean {
+        val declaration = ksType.declaration
+        val qualifiedName = declaration.qualifiedName?.asString() ?: return false
+        val cacheKey = "$qualifiedName -> $superTypeName"
+        cache[cacheKey]?.let { return it }
+
+        val result = isSubtypeOfInternal(ksType, superTypeName, mutableSetOf())
+        cache[cacheKey] = result
+        return result
+    }
+
+    fun isSubtypeOf(classDeclaration: KSClassDeclaration, superTypeName: String): Boolean {
+        val qualifiedName = classDeclaration.qualifiedName?.asString() ?: return false
+        if (qualifiedName == superTypeName) return true
+        val cacheKey = "$qualifiedName -> $superTypeName"
+        cache[cacheKey]?.let { return it }
+
+        val result = isSubtypeOfClassInternal(classDeclaration, superTypeName, mutableSetOf())
+        cache[cacheKey] = result
+        return result
+    }
+
+    private fun isSubtypeOfInternal(
+        ksType: KSType,
+        superTypeName: String,
+        visited: MutableSet<String>
+    ): Boolean {
+        val declaration = ksType.declaration
+        val qualifiedName = declaration.qualifiedName?.asString() ?: return false
+        if (qualifiedName == superTypeName) return true
+        if (!visited.add(qualifiedName)) return false
+        if (declaration !is KSClassDeclaration) return false
+        return declaration.superTypes.any { superTypeRef ->
+            val resolved = superTypeRef.resolve()
+            isSubtypeOfInternal(resolved, superTypeName, visited)
+        }
+    }
+
+    private fun isSubtypeOfClassInternal(
+        classDeclaration: KSClassDeclaration,
+        superTypeName: String,
+        visited: MutableSet<String>
+    ): Boolean {
+        val qualifiedName = classDeclaration.qualifiedName?.asString() ?: return false
+        if (qualifiedName == superTypeName) return true
+        if (!visited.add(qualifiedName)) return false
+        return classDeclaration.superTypes.any { superTypeRef ->
+            val resolved = superTypeRef.resolve()
+            val declaration = resolved.declaration as? KSClassDeclaration ?: return@any false
+            isSubtypeOfClassInternal(declaration, superTypeName, visited)
+        }
+    }
+}
+
+/**
  * 将 KSP 的 KSType 转换为 JavaPoet 的 TypeName。
  * 处理 Kotlin→Java 类型映射、泛型、内部类、nullable boxing 等。
  */
@@ -35,6 +98,8 @@ fun KSType.toTypeName(): TypeName {
         "kotlin.Char" -> TypeName.CHAR
         "kotlin.Byte" -> TypeName.BYTE
         "kotlin.Short" -> TypeName.SHORT
+        "kotlin.Unit" -> TypeName.VOID
+        "kotlin.Nothing" -> TypeName.VOID
         "kotlin.String", "java.lang.String" -> ClassName.get("java.lang", "String")
         "kotlin.CharSequence", "java.lang.CharSequence" -> ClassName.get("java.lang", "CharSequence")
         "kotlin.IntArray" -> ArrayTypeName.of(TypeName.INT)

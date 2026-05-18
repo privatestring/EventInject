@@ -1,6 +1,7 @@
 package launcher.classbinding
 
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import launcher.utils.SubtypeChecker
 
 /**
  * 佛祖保佑         永无BUG
@@ -20,25 +21,9 @@ enum class KnownClassType(vararg val typeNames: String) {
         fun getByType(classDeclaration: KSClassDeclaration): KnownClassType {
             return entries.firstOrNull { type ->
                 type.typeNames.any { typeName ->
-                    typeName.isNotEmpty() && isSubtypeOf(classDeclaration, typeName, mutableSetOf())
+                    typeName.isNotEmpty() && SubtypeChecker.isSubtypeOf(classDeclaration, typeName)
                 }
             } ?: Model
-        }
-
-        /** 递归判断继承关系，visited 防止循环继承导致无限递归 */
-        private fun isSubtypeOf(
-            classDeclaration: KSClassDeclaration,
-            superTypeName: String,
-            visited: MutableSet<String>
-        ): Boolean {
-            val qualifiedName = classDeclaration.qualifiedName?.asString() ?: return false
-            if (qualifiedName == superTypeName) return true
-            if (!visited.add(qualifiedName)) return false // 已访问过，防环
-            return classDeclaration.superTypes.any { superTypeRef ->
-                val resolved = superTypeRef.resolve()
-                val declaration = resolved.declaration as? KSClassDeclaration ?: return@any false
-                isSubtypeOf(declaration, superTypeName, visited)
-            }
         }
     }
 }

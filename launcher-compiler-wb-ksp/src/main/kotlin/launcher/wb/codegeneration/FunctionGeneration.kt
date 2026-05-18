@@ -1,7 +1,6 @@
 package launcher.wb.codegeneration
 
 import com.google.devtools.ksp.processing.CodeGenerator
-import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -91,10 +90,10 @@ class FunctionGeneration(
             if (symbol is KSClassDeclaration) candidates += symbol
         }
 
-        // 筛选出真正标注了 @Function 的类
+        // 筛选出真正标注了 @Function 的类（使用全限定名匹配，避免同名注解误匹配）
         for (classDecl in candidates) {
-            val functionAnno = classDecl.annotations.firstOrNull {
-                it.shortName.asString() == "Function"
+            val functionAnno = classDecl.annotations.firstOrNull { anno ->
+                anno.annotationType.resolve().declaration.qualifiedName?.asString() == Function::class.qualifiedName
             } ?: continue
 
             functionClasses.add(classDecl)
@@ -115,10 +114,9 @@ class FunctionGeneration(
         val distinctGroups = allGroups.distinct().filter { it.isNotEmpty() }
         val fileSpec = brewKotlin(distinctGroups)
 
-        val sourceFiles = functionClasses.mapNotNull { it.containingFile }
         writeKotlinFile(
             fileSpec = fileSpec,
-            dependencies = Dependencies(aggregating = true, *sourceFiles.toTypedArray())
+            dependencies = buildDependencies(aggregating = true, functionClasses)
         )
     }
 
@@ -152,7 +150,7 @@ class FunctionGeneration(
      * 生成所有功能的 FUNCTION_XXX_ID 常量
      */
     private fun TypeSpec.Builder.addFunctionIdConstants(): TypeSpec.Builder {
-        val usedIds = mutableListOf<String>()
+        val usedIds = mutableSetOf<String>()
 
         functionClasses.forEach { classDecl ->
             val simpleName = classDecl.simpleName.asString()

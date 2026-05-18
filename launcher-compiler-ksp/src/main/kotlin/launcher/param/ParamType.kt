@@ -1,8 +1,9 @@
 package launcher.param
 
-import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.ClassKind
+import launcher.utils.SubtypeChecker
 
 /**
  * 佛祖保佑         永无BUG
@@ -145,34 +146,9 @@ enum class ParamType {
             }
         }
 
-        /** 类型继承判断缓存，key = "qualifiedName -> superTypeName"。KSP 单轮编译内有效，无并发场景。 */
-        private val subtypeCache = HashMap<String, Boolean>()
-
+        /** 类型继承判断，委托给公共 SubtypeChecker（统一缓存） */
         fun isSubtypeOf(ksType: KSType, superTypeName: kotlin.String): kotlin.Boolean {
-            val declaration = ksType.declaration
-            val qualifiedName = declaration.qualifiedName?.asString() ?: return false
-            val cacheKey = "$qualifiedName -> $superTypeName"
-            subtypeCache[cacheKey]?.let { return it }
-
-            val result = isSubtypeOfInternal(ksType, superTypeName, mutableSetOf())
-            subtypeCache[cacheKey] = result
-            return result
-        }
-
-        private fun isSubtypeOfInternal(
-            ksType: KSType,
-            superTypeName: kotlin.String,
-            visited: MutableSet<kotlin.String>
-        ): kotlin.Boolean {
-            val declaration = ksType.declaration
-            val qualifiedName = declaration.qualifiedName?.asString() ?: return false
-            if (qualifiedName == superTypeName) return true
-            if (!visited.add(qualifiedName)) return false
-            if (declaration !is KSClassDeclaration) return false
-            return declaration.superTypes.any { superTypeRef ->
-                val resolved = superTypeRef.resolve()
-                isSubtypeOfInternal(resolved, superTypeName, visited)
-            }
+            return SubtypeChecker.isSubtypeOf(ksType, superTypeName)
         }
     }
 }
