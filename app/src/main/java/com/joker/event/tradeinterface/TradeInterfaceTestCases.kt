@@ -43,7 +43,7 @@ class TradeAccountPermissionInterfaceImpl : ITradeAccountPermissionInterface
 @TradeInterface(IAccountInfoInnerInterface::class, isInner = true)
 class AccountInfoInnerInterfaceImpl : IAccountInfoInnerInterface
 
-@TradeInterface(IAccountInnerInterface::class, isInner = true)
+@TradeInterface(IAccountInnerInterface::class)
 class AccountInnerInterfaceImpl : IAccountInnerInterface
 
 @TradeInterface(IAccountSimulatedInnerInterface::class, isInner = true)

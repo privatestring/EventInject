@@ -289,6 +289,8 @@ class PropertyResolver(private val logger: KSPLogger) {
 
     private fun decap(input: String): String {
         if (input.isEmpty()) return input
+        // Java Bean 规范：如果前两个字符都是大写，不改变大小写
+        if (input.length > 1 && input[0].isUpperCase() && input[1].isUpperCase()) return input
         return input.substring(0, 1).lowercase() + input.substring(1)
     }
 

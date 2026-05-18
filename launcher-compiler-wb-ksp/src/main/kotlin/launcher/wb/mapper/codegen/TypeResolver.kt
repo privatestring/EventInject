@@ -99,9 +99,14 @@ object TypeResolver {
         if (type == null) return TypeName.VOID
         val qualifiedName = type.declaration.qualifiedName?.asString() ?: return TypeName.OBJECT
 
-        // 处理基本类型
-        val primitiveTypeName = KOTLIN_TO_JAVA_TYPE[qualifiedName]
-        if (primitiveTypeName != null) return primitiveTypeName
+        // 处理基本类型：nullable 用包装类，non-null 用原始类型
+        if (type.isMarkedNullable) {
+            val boxedType = KOTLIN_TO_JAVA_BOXED[qualifiedName]
+            if (boxedType != null) return boxedType
+        } else {
+            val primitiveTypeName = KOTLIN_TO_JAVA_TYPE[qualifiedName]
+            if (primitiveTypeName != null) return primitiveTypeName
+        }
 
         // 处理集合类型（带泛型）
         val typeArgs = type.arguments
@@ -232,5 +237,18 @@ object TypeResolver {
         "java.lang.Short" to ClassName.get("java.lang", "Short"),
         "java.lang.Character" to ClassName.get("java.lang", "Character"),
         "java.lang.Object" to TypeName.OBJECT
+    )
+
+    /** Kotlin nullable 基本类型 → Java 包装类 */
+    private val KOTLIN_TO_JAVA_BOXED: Map<String, TypeName> = mapOf(
+        "kotlin.Int" to ClassName.get("java.lang", "Integer"),
+        "kotlin.Long" to ClassName.get("java.lang", "Long"),
+        "kotlin.Double" to ClassName.get("java.lang", "Double"),
+        "kotlin.Float" to ClassName.get("java.lang", "Float"),
+        "kotlin.Boolean" to ClassName.get("java.lang", "Boolean"),
+        "kotlin.Byte" to ClassName.get("java.lang", "Byte"),
+        "kotlin.Short" to ClassName.get("java.lang", "Short"),
+        "kotlin.Char" to ClassName.get("java.lang", "Character"),
+        "kotlin.String" to ClassName.get("java.lang", "String")
     )
 }
