@@ -12,7 +12,6 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
-import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.TypeSpec
 import launcher.TradeServiceMaker
 
@@ -53,8 +52,8 @@ class TradeServiceMakerGeneration(
     /** 收集到的注解数据 */
     private val annotatedData = mutableListOf<TradeServiceMakerData>()
 
-    /** 缓存 Resolver 用于 generate 阶段的包扫描 */
-    private var cachedResolver: Resolver? = null
+    /** 缓存扫描结果，在 collect 阶段完成包扫描 */
+    private val scanResults = mutableListOf<Pair<TradeServiceMakerData, List<KSClassDeclaration>>>()
 
     override fun collect(resolver: Resolver): List<KSAnnotated> {
         val unprocessed = mutableListOf<KSAnnotated>()
@@ -72,30 +71,27 @@ class TradeServiceMakerGeneration(
             }
         }
 
-        // 缓存 resolver 用于 generate 阶段
-        if (annotatedData.isNotEmpty()) {
-            cachedResolver = resolver
+        // 在 collect 阶段完成包扫描，避免跨阶段持有 Resolver 引用
+        annotatedData.forEach { data ->
+            val subInterfaces = findAllSubInterfaces(data, resolver)
+            scanResults += data to subInterfaces
         }
 
         return unprocessed
     }
 
-    override fun hasDataToGenerate(): Boolean = annotatedData.isNotEmpty()
+    override fun hasDataToGenerate(): Boolean = scanResults.isNotEmpty()
 
     override fun generate() {
-        val resolver = cachedResolver ?: return
-
-        for (data in annotatedData) {
-            generateForAnnotation(data, resolver)
+        for ((data, allSubInterfaces) in scanResults) {
+            generateForAnnotation(data, allSubInterfaces)
         }
     }
 
     /**
      * 为单个 @TradeServiceMaker 注解生成聚合接口
      */
-    private fun generateForAnnotation(data: TradeServiceMakerData, resolver: Resolver) {
-        // 1. 扫描指定包下所有继承自 baseInterface 的接口
-        val allSubInterfaces = findAllSubInterfaces(data, resolver)
+    private fun generateForAnnotation(data: TradeServiceMakerData, allSubInterfaces: List<KSClassDeclaration>) {
 
         logger.info(
             "TradeServiceAggregator: Total interfaces found: ${allSubInterfaces.size}"

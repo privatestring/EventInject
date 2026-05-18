@@ -1,8 +1,8 @@
 package launcher.param
 
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.ClassKind
 
 /**
  * 佛祖保佑         永无BUG
@@ -145,8 +145,8 @@ enum class ParamType {
             }
         }
 
-        /** 类型继承判断缓存，key = "qualifiedName -> superTypeName" */
-        private val subtypeCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+        /** 类型继承判断缓存，key = "qualifiedName -> superTypeName"。KSP 单轮编译内有效，无并发场景。 */
+        private val subtypeCache = HashMap<String, Boolean>()
 
         fun isSubtypeOf(ksType: KSType, superTypeName: kotlin.String): kotlin.Boolean {
             val declaration = ksType.declaration

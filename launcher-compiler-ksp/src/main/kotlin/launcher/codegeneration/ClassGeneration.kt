@@ -9,7 +9,6 @@ import launcher.classbinding.ClassBinding
 import launcher.param.ArgumentBinding
 import launcher.param.ParamType
 import launcher.utils.BIND_THIS_CLASS
-import launcher.utils.CLASS_NAME_END
 import launcher.utils.CONTEXT
 import launcher.utils.STRING
 import launcher.utils.checkNotBox

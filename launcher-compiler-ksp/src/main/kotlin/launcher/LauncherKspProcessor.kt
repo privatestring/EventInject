@@ -10,12 +10,9 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.validate
 import com.squareup.javapoet.ClassName
+import launcher.classbinding.ClassBinding
 import launcher.classbinding.ClassBindingFactory
 import launcher.codegeneration.RouterGeneration
-import launcher.Boom
-import launcher.MakeResult
-import launcher.ParentCls
-import launcher.Router
 
 /**
  * 佛祖保佑         永无BUG
@@ -112,8 +109,19 @@ class LauncherKspProcessor(
         if (classBinding.routerPath.isNotEmpty()) {
             val simpleName = classDecl.simpleName.asString()
             val routerBindingClassName = ClassName.get(classBinding.packageName, "${simpleName}_XXXxxx")
-            classBinding.bindingClassName = routerBindingClassName
-            val routerJavaFile = RouterGeneration(classBinding).brewJava()
+            // 创建 Router 专用的 ClassBinding 副本，避免修改原对象
+            val routerClassBinding = ClassBinding(
+                knownClassType = classBinding.knownClassType,
+                targetTypeName = classBinding.targetTypeName,
+                bindingClassName = routerBindingClassName,
+                packageName = classBinding.packageName,
+                argumentBindings = classBinding.argumentBindings,
+                includeStartForResult = classBinding.includeStartForResult,
+                routerPath = classBinding.routerPath,
+                isParentClass = classBinding.isParentClass,
+                cls = classBinding.cls
+            )
+            val routerJavaFile = RouterGeneration(routerClassBinding).brewJava()
             val routerFile = codeGenerator.createNewFile(
                 dependencies = Dependencies(aggregating = false, containingFile),
                 packageName = routerJavaFile.packageName,

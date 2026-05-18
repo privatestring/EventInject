@@ -2,7 +2,6 @@ package launcher.codegeneration
 
 import com.squareup.javapoet.TypeName
 import launcher.param.ParamType
-import launcher.utils.checkNotBox
 
 /** Bundle 写入方法映射 */
 fun getBundleSetterFor(type: ParamType) = when (type) {

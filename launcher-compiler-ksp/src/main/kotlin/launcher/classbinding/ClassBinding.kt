@@ -21,7 +21,7 @@ import launcher.utils.createSublists
 internal class ClassBinding(
     val knownClassType: KnownClassType,       // Activity/Fragment/BroadcastReceiver/Model
     val targetTypeName: TypeName,             // 源类的 Java TypeName
-    var bindingClassName: ClassName,          // 生成类名（如 XxxLauncher），Router 生成时会被替换为 Xxx_XXXxxx
+    val bindingClassName: ClassName,          // 生成类名（如 XxxLauncher）
     val packageName: String,
     val argumentBindings: List<ArgumentBinding>, // 所有 @Boom 字段，按 index 排序
     val includeStartForResult: Boolean,       // @MakeResult.includeStartForResult
