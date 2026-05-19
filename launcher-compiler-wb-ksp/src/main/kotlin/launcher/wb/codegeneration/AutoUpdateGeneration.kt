@@ -29,7 +29,7 @@ class AutoUpdateGeneration(
     }
 
     private val targetClasses = mutableListOf<AutoUpdateTarget>()
-    private val propertyCollector = AutoUpdatePropertyCollector()
+    private val propertyCollector = AutoUpdatePropertyCollector(logger)
     private val codeBuilder = AutoUpdateCodeBuilder()
 
     override fun collect(resolver: Resolver): List<KSAnnotated> {
@@ -48,20 +48,23 @@ class AutoUpdateGeneration(
                 val functionName = anno.arg<String>(AutoUpdate::functionName.name).orEmpty()
                 val stringCheck = anno.arg<String>(AutoUpdate::stringCheck.name) ?: AutoUpdate.DEFAULT_STRING_CHECK
                 val stringCheckImport = anno.arg<String>(AutoUpdate::stringCheckImport.name) ?: AutoUpdate.DEFAULT_STRING_CHECK_IMPORT
+                val generateCopy = anno.arg<Boolean>(AutoUpdate::generateCopy.name) ?: false
 
                 // 使用类所在的包名作为生成代码的包名
                 val packageName = symbol.packageName.asString()
 
-                val parentClassName = resolveParentFromSuperTypes(symbol)
+                val (parentClassName, parentFunctionName) = resolveParentFromSuperTypes(symbol)
 
                 targetClasses.add(
                     AutoUpdateTarget(
                         classDecl = symbol,
                         functionName = functionName,
                         parentClassName = parentClassName,
+                        parentFunctionName = parentFunctionName,
                         packageName = packageName,
                         stringCheck = stringCheck,
-                        stringCheckImport = stringCheckImport
+                        stringCheckImport = stringCheckImport,
+                        generateCopy = generateCopy
                     )
                 )
             }
@@ -75,7 +78,12 @@ class AutoUpdateGeneration(
     override fun generate() {
         for (target in targetClasses) {
             val properties = propertyCollector.collectProperties(target.classDecl)
-            val fileSpec = codeBuilder.buildFileSpec(target, properties)
+            val copyProperties = if (target.generateCopy) {
+                propertyCollector.collectAllProperties(target.classDecl)
+            } else {
+                emptyList()
+            }
+            val fileSpec = codeBuilder.buildFileSpec(target, properties, copyProperties)
             writeKotlinFile(
                 fileSpec = fileSpec,
                 dependencies = buildDependencies(aggregating = false, listOf(target.classDecl))
@@ -85,20 +93,24 @@ class AutoUpdateGeneration(
 
     /**
      * 从类的 superTypes 中自动推断父类。
-     * 查找直接父类中是否标注了 @AutoUpdate，如果是则返回其全限定名。
+     * 查找直接父类中是否标注了 @AutoUpdate，如果是则返回其全限定名和 functionName。
+     * @return Pair(父类全限定名, 父类 functionName)，无父类时返回 (null, null)
      */
-    private fun resolveParentFromSuperTypes(classDecl: KSClassDeclaration): String? {
+    private fun resolveParentFromSuperTypes(classDecl: KSClassDeclaration): Pair<String?, String?> {
         for (superType in classDecl.superTypes) {
             val superDecl = superType.resolve().declaration as? KSClassDeclaration ?: continue
             val qualifiedName = superDecl.qualifiedName?.asString() ?: continue
             if (qualifiedName == "kotlin.Any" || qualifiedName == "java.lang.Object"
                 || qualifiedName == "java.io.Serializable") continue
-            val hasAutoUpdate = superDecl.annotations.any {
+            val autoUpdateAnno = superDecl.annotations.firstOrNull {
                 it.annotationType.resolve().declaration.qualifiedName?.asString() == AUTO_UPDATE_QUALIFIED_NAME
             }
-            if (hasAutoUpdate) return qualifiedName
+            if (autoUpdateAnno != null) {
+                val parentFuncName = autoUpdateAnno.arg<String>(AutoUpdate::functionName.name).orEmpty()
+                return qualifiedName to parentFuncName
+            }
         }
-        return null
+        return null to null
     }
 }
 

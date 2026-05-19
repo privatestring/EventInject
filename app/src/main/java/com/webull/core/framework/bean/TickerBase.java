@@ -1,8 +1,11 @@
 package com.webull.core.framework.bean;
 
+import androidx.annotation.Nullable;
+
 import java.io.Serializable;
 
 import wb.bean.AutoUpdate;
+import wb.bean.AutoUpdateCheck;
 
 /** Stub: 标的档案信息（从 AppDev3 同步字段） */
 @AutoUpdate
@@ -32,6 +35,23 @@ public class TickerBase implements Serializable {
     public String expirationType;
     public String changeRatio;
     public int isStdSettle;
+
+    @AutoUpdateCheck(condition = "{from}.listStatusInteger != null")
+    private Integer listStatus;
+
+    public int getListStatus() {
+        return listStatus == null ? 0 : listStatus;
+    }
+
+    @Nullable
+    public Integer getListStatusInteger() {
+        return listStatus;
+    }
+
+    public void setListStatus(int listStatus) {
+        this.listStatus = listStatus;
+    }
+
 
     public String getTickerId() { return tickerId; }
     public void setTickerId(String v) { tickerId = v; }
