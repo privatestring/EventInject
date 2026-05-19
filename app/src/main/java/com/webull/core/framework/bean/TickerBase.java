@@ -2,7 +2,10 @@ package com.webull.core.framework.bean;
 
 import java.io.Serializable;
 
+import wb.bean.AutoUpdate;
+
 /** Stub: 标的档案信息（从 AppDev3 同步字段） */
+@AutoUpdate
 public class TickerBase implements Serializable {
     public static final int TICKER_TYPE_OPTION = 2;
 

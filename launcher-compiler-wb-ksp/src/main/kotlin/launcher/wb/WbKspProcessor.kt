@@ -5,6 +5,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
+import launcher.wb.codegeneration.AutoUpdateGeneration
 import launcher.wb.codegeneration.BaseGeneration
 import launcher.wb.codegeneration.FunctionGeneration
 import launcher.wb.codegeneration.MarketViewRouteGeneration
@@ -53,6 +54,7 @@ class WbKspProcessor(
             TradeInterfaceGeneration(codeGenerator, logger, options),
             TradeServiceMakerGeneration(codeGenerator, logger),
             MapperGeneration(codeGenerator, logger),
+            AutoUpdateGeneration(codeGenerator, logger),
         )
     }
 
