@@ -48,7 +48,6 @@ class AutoUpdateGeneration(
                 val functionName = anno.arg<String>(AutoUpdate::functionName.name).orEmpty()
                 val stringCheck = anno.arg<String>(AutoUpdate::stringCheck.name) ?: AutoUpdate.DEFAULT_STRING_CHECK
                 val stringCheckImport = anno.arg<String>(AutoUpdate::stringCheckImport.name) ?: AutoUpdate.DEFAULT_STRING_CHECK_IMPORT
-                val generateCopy = anno.arg<Boolean>(AutoUpdate::generateCopy.name) ?: false
 
                 // 使用类所在的包名作为生成代码的包名
                 val packageName = symbol.packageName.asString()
@@ -63,8 +62,7 @@ class AutoUpdateGeneration(
                         parentFunctionName = parentFunctionName,
                         packageName = packageName,
                         stringCheck = stringCheck,
-                        stringCheckImport = stringCheckImport,
-                        generateCopy = generateCopy
+                        stringCheckImport = stringCheckImport
                     )
                 )
             }
@@ -78,12 +76,7 @@ class AutoUpdateGeneration(
     override fun generate() {
         for (target in targetClasses) {
             val properties = propertyCollector.collectProperties(target.classDecl)
-            val copyProperties = if (target.generateCopy) {
-                propertyCollector.collectAllProperties(target.classDecl)
-            } else {
-                emptyList()
-            }
-            val fileSpec = codeBuilder.buildFileSpec(target, properties, copyProperties)
+            val fileSpec = codeBuilder.buildFileSpec(target, properties)
             writeKotlinFile(
                 fileSpec = fileSpec,
                 dependencies = buildDependencies(aggregating = false, listOf(target.classDecl))

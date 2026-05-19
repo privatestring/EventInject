@@ -32,17 +32,6 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
      * 收集类声明的属性，过滤掉 @AutoUpdateIgnore、static、companion 等。
      */
     fun collectProperties(classDecl: KSClassDeclaration): List<PropertyInfo> {
-        return collectPropertiesInternal(classDecl, forCopy = false)
-    }
-
-    /**
-     * 收集类声明的所有属性用于 copy 函数（不跳过 SKIP 类型）。
-     */
-    fun collectAllProperties(classDecl: KSClassDeclaration): List<PropertyInfo> {
-        return collectPropertiesInternal(classDecl, forCopy = true)
-    }
-
-    private fun collectPropertiesInternal(classDecl: KSClassDeclaration, forCopy: Boolean): List<PropertyInfo> {
         val result = mutableListOf<PropertyInfo>()
         val collectedNames = mutableSetOf<String>()
 
@@ -55,14 +44,14 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
             if (propName in parentPropertyNames) continue
             if (propName in collectedNames) continue
 
-            val info = processProperty(prop, forCopy) ?: continue
+            val info = processProperty(prop) ?: continue
             result.add(info)
             collectedNames.add(propName)
         }
 
         // 第二步：对 Java 类，扫描 getter/setter 方法对推断 private 字段
         if (classDecl.origin == Origin.JAVA || classDecl.origin == Origin.JAVA_LIB) {
-            val javaFields = collectJavaPrivateFields(classDecl, parentPropertyNames, collectedNames, forCopy)
+            val javaFields = collectJavaPrivateFields(classDecl, parentPropertyNames, collectedNames)
             result.addAll(javaFields)
         }
 
@@ -90,7 +79,7 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
     /**
      * 处理单个 KSPropertyDeclaration，返回 PropertyInfo 或 null（跳过）
      */
-    private fun processProperty(prop: KSPropertyDeclaration, forCopy: Boolean): PropertyInfo? {
+    private fun processProperty(prop: KSPropertyDeclaration): PropertyInfo? {
         val propName = prop.simpleName.asString()
 
         if (prop.modifiers.contains(Modifier.JAVA_STATIC)) return null
@@ -109,13 +98,12 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
             )
         }
 
-        // @AutoUpdateIgnore: 标记为忽略（forCopy 模式下直接跳过，不生成注释）
+        // @AutoUpdateIgnore: 标记为忽略
         if (hasIgnore) {
-            return if (forCopy) null
-            else PropertyInfo(propName, FieldType.SKIP, ignored = true, ignoreReason = "@AutoUpdateIgnore")
+            return PropertyInfo(propName, FieldType.SKIP, ignored = true, ignoreReason = "@AutoUpdateIgnore")
         }
 
-        if (prop.setter == null && prop.modifiers.contains(Modifier.PRIVATE) && !hasCheck && !hasAlways && !forCopy) return null
+        if (prop.setter == null && prop.modifiers.contains(Modifier.PRIVATE) && !hasCheck && !hasAlways) return null
         if (propName.startsWith("_")) return null
 
         val type = prop.type.resolve()
@@ -128,7 +116,7 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
         val (customCheck, customCheckImport) = extractAutoUpdateCheck(prop.annotations)
 
         // SKIP 类型处理
-        if (fieldType == FieldType.SKIP && !forCopy && customCheck == null && !hasAlways) {
+        if (fieldType == FieldType.SKIP && customCheck == null && !hasAlways) {
             // 返回忽略信息用于生成注释
             val reason = "skip(${typeName.substringAfterLast(".")})"
             return PropertyInfo(propName, FieldType.SKIP, ignored = true, ignoreReason = reason)
@@ -152,8 +140,7 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
     private fun collectJavaPrivateFields(
         classDecl: KSClassDeclaration,
         parentPropertyNames: Set<String>,
-        alreadyCollected: Set<String>,
-        forCopy: Boolean
+        alreadyCollected: Set<String>
     ): List<PropertyInfo> {
         val result = mutableListOf<PropertyInfo>()
         val functions = classDecl.getDeclaredFunctions().toList()
@@ -211,8 +198,8 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
             val (customCheck, customCheckImport) = fieldCheckMap[fieldName] ?: (null to null)
             val isAlways = fieldName in alwaysFieldNames
 
-            // SKIP 类型：forCopy 模式全部收集；否则需要 @AutoUpdateCheck 或 @AutoUpdateAlways
-            if (fieldType == FieldType.SKIP && !forCopy && customCheck == null && !isAlways) continue
+            // SKIP 类型：需要 @AutoUpdateCheck 或 @AutoUpdateAlways
+            if (fieldType == FieldType.SKIP && customCheck == null && !isAlways) continue
 
             // 校验：condition 中没有 {field} 或 {from} 占位符
             if (customCheck != null && !customCheck.contains("{field}") && !customCheck.contains("{from}")) {

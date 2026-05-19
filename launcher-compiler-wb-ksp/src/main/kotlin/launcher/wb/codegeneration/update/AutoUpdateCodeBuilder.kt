@@ -15,7 +15,7 @@ import com.squareup.kotlinpoet.buildCodeBlock
  */
 class AutoUpdateCodeBuilder {
 
-    fun buildFileSpec(target: AutoUpdateTarget, properties: List<PropertyInfo>, copyProperties: List<PropertyInfo> = emptyList()): FileSpec {
+    fun buildFileSpec(target: AutoUpdateTarget, properties: List<PropertyInfo>): FileSpec {
         val simpleName = target.classDecl.simpleName.asString()
         val qualifiedName = target.classDecl.qualifiedName?.asString()
             ?: error("Cannot resolve qualified name for $simpleName")
@@ -49,23 +49,11 @@ class AutoUpdateCodeBuilder {
             val parentSimpleName = target.parentClassName.substringAfterLast(".")
             val parentFuncName = resolveParentFuncName(target.parentFunctionName, parentSimpleName)
             builder.addImport(parentPkg, parentFuncName)
-            // copy 函数也需要 import 父类的 copy
-            if (target.generateCopy) {
-                builder.addImport(parentPkg, "copy${parentSimpleName}Fields")
-            }
         }
 
         builder.addFunction(
             buildUpdateFunction(funcName, targetClass, properties, target.parentClassName, target.parentFunctionName, target.stringCheck)
         )
-
-        // 生成 copy 函数（无条件全量赋值）
-        if (target.generateCopy) {
-            val copyFuncName = "copy${simpleName}Fields"
-            builder.addFunction(
-                buildCopyFunction(copyFuncName, targetClass, copyProperties, target.parentClassName, target.parentFunctionName)
-            )
-        }
 
         return builder.build()
     }
@@ -169,49 +157,5 @@ class AutoUpdateCodeBuilder {
             FieldType.OBJECT -> "$name = from.$name"
             FieldType.SKIP -> error("SKIP type should not reach generateAssignment")
         }
-    }
-
-    /**
-     * 生成无条件全量拷贝函数。所有字段直接赋值，不做任何检查。
-     * 忽略 @AutoUpdateIgnore（因为 copy 是全量拷贝语义）。
-     */
-    private fun buildCopyFunction(
-        funcName: String,
-        targetClass: ClassName,
-        properties: List<PropertyInfo>,
-        parentClassName: String?,
-        parentFunctionName: String?
-    ): FunSpec {
-        val hasParent = !parentClassName.isNullOrEmpty()
-
-        val builder = FunSpec.builder(funcName)
-            .receiver(targetClass)
-            .addParameter("from", targetClass)
-
-        if (hasParent) {
-            builder.addParameter(
-                ParameterSpec.builder("callParent", Boolean::class)
-                    .defaultValue("true")
-                    .build()
-            )
-        }
-
-        builder.addCode(buildCodeBlock {
-            if (hasParent) {
-                val parentSimpleName = parentClassName!!.substringAfterLast(".")
-                val parentCopyFuncName = "copy${parentSimpleName}Fields"
-                beginControlFlow("if (callParent)")
-                addStatement("$parentCopyFuncName(from)")
-                endControlFlow()
-                addStatement("")
-            }
-
-            val sorted = properties.sortedBy { it.name }
-            for (prop in sorted) {
-                addStatement("${prop.accessName} = from.${prop.accessName}")
-            }
-        })
-
-        return builder.build()
     }
 }

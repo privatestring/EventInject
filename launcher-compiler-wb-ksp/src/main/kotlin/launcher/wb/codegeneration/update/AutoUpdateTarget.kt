@@ -13,9 +13,7 @@ data class AutoUpdateTarget(
     val parentFunctionName: String? = null,
     val packageName: String,
     val stringCheck: String,
-    val stringCheckImport: String,
-    /** 是否生成 copy 函数 */
-    val generateCopy: Boolean = false
+    val stringCheckImport: String
 )
 
 /**
