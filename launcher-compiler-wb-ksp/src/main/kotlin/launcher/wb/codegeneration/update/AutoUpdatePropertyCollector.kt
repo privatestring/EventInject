@@ -131,7 +131,10 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
             return null
         }
 
-        return PropertyInfo(propName, fieldType, customCheck, customCheckImport, hasAlways)
+        // 解析属性声明的默认值字面量
+        val defaultValue = extractDefaultValue(prop)
+
+        return PropertyInfo(propName, fieldType, customCheck, customCheckImport, hasAlways, defaultValue = defaultValue)
     }
 
     /**
@@ -262,6 +265,34 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
         return check to import?.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * 从 Kotlin 属性声明中提取默认值字面量。
+     * 通过读取源码文本，解析 `= xxx` 部分的初始值。
+     * 仅对数值类型（INT/LONG/DOUBLE/FLOAT）有意义。
+     */
+    private fun extractDefaultValue(prop: KSPropertyDeclaration): String? {
+        val containingFile = prop.containingFile ?: return null
+        val filePath = containingFile.filePath
+        val file = java.io.File(filePath)
+        if (!file.exists()) return null
+
+        val propName = prop.simpleName.asString()
+        val lines = file.readLines()
+
+        // 查找属性声明行
+        for (line in lines) {
+            val trimmed = line.trim()
+            // 匹配 var/val propName 开头的声明
+            val pattern = Regex("""(?:var|val)\s+$propName\s*(?::\s*\S+)?\s*=\s*(.+)""")
+            val match = pattern.find(trimmed) ?: continue
+            val valueStr = match.groupValues[1].trim()
+            // 去除行尾注释
+            val cleanValue = valueStr.split("//").first().trim()
+            return cleanValue.ifEmpty { null }
+        }
+        return null
+    }
+
     companion object {
         fun classifyFieldType(typeName: String, isNullable: Boolean): FieldType = when {
             typeName == "kotlin.String" || typeName == "java.lang.String" -> FieldType.STRING
@@ -273,7 +304,7 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
             typeName == "double" -> FieldType.DOUBLE
             (typeName == "kotlin.Float" || typeName == "java.lang.Float") && !isNullable -> FieldType.FLOAT
             typeName == "float" -> FieldType.FLOAT
-            (typeName == "kotlin.Boolean" && !isNullable) || typeName == "boolean" -> FieldType.SKIP
+            (typeName == "kotlin.Boolean" && !isNullable) || typeName == "boolean" -> FieldType.BOOLEAN
             typeName == "kotlin.IntArray" || typeName == "int[]" -> FieldType.SKIP
             isNullable -> FieldType.NULLABLE_OBJECT
             else -> FieldType.OBJECT

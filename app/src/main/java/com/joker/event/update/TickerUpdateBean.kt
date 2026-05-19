@@ -31,6 +31,13 @@ class TickerUpdateBean : TickerRealtimeV2() {
     @AutoUpdateCheck(condition = "{field} > 0")
     var volume: Int = 0
 
+    var volume2: Int = -10086
+    var volume3: Long = 0
+    var isX: Boolean = false
+    var isX2: Boolean? = null
+    var isX3: Boolean = true
+    var isX4: Boolean = true
+
     // Long 自定义 condition（替代默认 != 0L）
     @AutoUpdateCheck(condition = "{field} != -1L")
     var timestamp: Long = 0L

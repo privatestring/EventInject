@@ -149,13 +149,64 @@ class AutoUpdateCodeBuilder {
                 val condition = stringCheck.replace("{field}", "from.$name")
                 "if ($condition) $name = from.$name"
             }
-            FieldType.INT -> "if (from.$name != 0) $name = from.$name"
-            FieldType.LONG -> "if (from.$name != 0L) $name = from.$name"
-            FieldType.DOUBLE -> "if (from.$name != 0.0) $name = from.$name"
-            FieldType.FLOAT -> "if (from.$name != 0.0f) $name = from.$name"
+            FieldType.INT -> {
+                val default = normalizeIntLiteral(prop.defaultValue) ?: "0"
+                "if (from.$name != $default) $name = from.$name"
+            }
+            FieldType.LONG -> {
+                val default = normalizeLongLiteral(prop.defaultValue) ?: "0L"
+                "if (from.$name != $default) $name = from.$name"
+            }
+            FieldType.DOUBLE -> {
+                val default = normalizeDoubleLiteral(prop.defaultValue) ?: "0.0"
+                "if (from.$name != $default) $name = from.$name"
+            }
+            FieldType.FLOAT -> {
+                val default = normalizeFloatLiteral(prop.defaultValue) ?: "0.0f"
+                "if (from.$name != $default) $name = from.$name"
+            }
+            FieldType.BOOLEAN -> {
+                val default = prop.defaultValue ?: "false"
+                if (default == "false") "if (from.$name) $name = from.$name"
+                else "if (!from.$name) $name = from.$name"
+            }
             FieldType.NULLABLE_OBJECT -> "if (from.$name != null) $name = from.$name"
             FieldType.OBJECT -> "$name = from.$name"
             FieldType.SKIP -> error("SKIP type should not reach generateAssignment")
         }
+    }
+
+    /** 确保 Int 字面量不带类型后缀 */
+    private fun normalizeIntLiteral(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        val v = value.trimEnd('L', 'l')
+        // 验证是合法的整数字面量
+        return if (v.toLongOrNull() != null) v else null
+    }
+
+    /** 确保 Long 字面量带 L 后缀 */
+    private fun normalizeLongLiteral(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        val v = value.trimEnd('L', 'l', 'f', 'F')
+        // 验证是合法的整数字面量
+        return if (v.toLongOrNull() != null) "${v}L" else null
+    }
+
+    /** 确保 Double 字面量是浮点格式（不带 f 后缀） */
+    private fun normalizeDoubleLiteral(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        val v = value.trimEnd('f', 'F', 'L', 'l')
+        val num = v.toDoubleOrNull() ?: return null
+        // 确保有小数点
+        return if ('.' in v) v else "$v.0"
+    }
+
+    /** 确保 Float 字面量带 f 后缀 */
+    private fun normalizeFloatLiteral(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        val v = value.trimEnd('f', 'F')
+        val num = v.toDoubleOrNull() ?: return null
+        val base = if ('.' in v) v else "$v.0"
+        return "${base}f"
     }
 }

@@ -31,7 +31,9 @@ data class PropertyInfo(
     /** 被 @AutoUpdateIgnore 标记忽略 */
     val ignored: Boolean = false,
     /** 忽略原因描述（用于生成注释） */
-    val ignoreReason: String? = null
+    val ignoreReason: String? = null,
+    /** 属性声明时的默认值字面量（如 "-1"、"0L"），用于生成 != 默认值 的条件 */
+    val defaultValue: String? = null
 ) {
     /** 实际访问名 */
     val accessName: String get() = name
@@ -42,11 +44,12 @@ data class PropertyInfo(
  */
 enum class FieldType {
     STRING,          // String? → valueIsNotEmpty()
-    INT,             // Int → != 0
-    LONG,            // Long → != 0L
-    DOUBLE,          // Double → != 0.0
-    FLOAT,           // Float → != 0.0f
+    INT,             // Int → != 默认值
+    LONG,            // Long → != 默认值L
+    DOUBLE,          // Double → != 默认值
+    FLOAT,           // Float → != 默认值f
+    BOOLEAN,         // Boolean → != 默认值
     NULLABLE_OBJECT, // Any? → != null
     OBJECT,          // 非空对象 → 直接赋值
-    SKIP             // 跳过不生成（Boolean、IntArray 等）
+    SKIP             // 跳过不生成（IntArray 等）
 }
