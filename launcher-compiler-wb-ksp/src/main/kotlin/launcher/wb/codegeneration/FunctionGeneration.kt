@@ -113,6 +113,10 @@ class FunctionGeneration(
     override fun generate() {
         val distinctGroups = allGroups.distinct().filter { it.isNotEmpty() }
         val fileSpec = brewKotlin(distinctGroups)
+        if (fileSpec == null) {
+            logger.error("FunctionGeneration: Duplicate functionId detected, skipping code generation.")
+            return
+        }
 
         writeKotlinFile(
             fileSpec = fileSpec,
@@ -120,17 +124,22 @@ class FunctionGeneration(
         )
     }
 
-    private fun brewKotlin(distinctGroups: List<String>): FileSpec {
+    private fun brewKotlin(distinctGroups: List<String>): FileSpec? {
+        val factoryObject = createFactoryObject(distinctGroups) ?: return null
         return FileSpec.builder("com.webull.functionmap", "FunctionFactory")
             .addFileComment("Generated code from Function! Do not modify.")
-            .addType(createFactoryObject(distinctGroups))
+            .addType(factoryObject)
             .build()
     }
 
-    private fun createFactoryObject(distinctGroups: List<String>): TypeSpec {
-        return TypeSpec.objectBuilder("FunctionFactory")
+    private fun createFactoryObject(distinctGroups: List<String>): TypeSpec? {
+        val builder = TypeSpec.objectBuilder("FunctionFactory")
             .addKdoc("功能地图 映射\n")
-            .addFunctionIdConstants()
+
+        val (builderWithConstants, success) = builder.addFunctionIdConstants()
+        if (!success) return null
+
+        return builderWithConstants
             .addCacheMapProperty()
             .addCreatorMapProperty()
             .addFunction(buildInitFunctionMethod())
@@ -148,9 +157,11 @@ class FunctionGeneration(
 
     /**
      * 生成所有功能的 FUNCTION_XXX_ID 常量
+     * @return false 表示检测到重复 ID，应中止生成
      */
-    private fun TypeSpec.Builder.addFunctionIdConstants(): TypeSpec.Builder {
-        val usedIds = mutableSetOf<String>()
+    private fun TypeSpec.Builder.addFunctionIdConstants(): Pair<TypeSpec.Builder, Boolean> {
+        val usedIds = mutableMapOf<String, KSClassDeclaration>()
+        var hasDuplicate = false
 
         functionClasses.forEach { classDecl ->
             val simpleName = classDecl.simpleName.asString()
@@ -166,13 +177,17 @@ class FunctionGeneration(
             val desc = descArg?.value as? String ?: ""
 
             // 重复 ID 检测
-            if (usedIds.contains(functionId)) {
+            val existing = usedIds[functionId]
+            if (existing != null) {
                 logger.error(
-                    "Found that the same FunctionId $functionId corresponds to multiple different implementation classes",
+                    "Found that the same FunctionId $functionId corresponds to multiple different implementation classes: " +
+                        "${existing.qualifiedName?.asString()} and ${classDecl.qualifiedName?.asString()}",
                     classDecl
                 )
+                hasDuplicate = true
+                return@forEach
             }
-            usedIds.add(functionId)
+            usedIds[functionId] = classDecl
 
             val constName = "FUNCTION_${simpleName.uppercase()}_ID"
             addProperty(
@@ -183,7 +198,7 @@ class FunctionGeneration(
                     .build()
             )
         }
-        return this
+        return this to !hasDuplicate
     }
 
     // ======================== 属性生成 ========================

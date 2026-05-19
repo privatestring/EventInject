@@ -86,15 +86,24 @@ class AutoUpdateGeneration(
 
     /**
      * 从类的 superTypes 中自动推断父类。
-     * 查找直接父类中是否标注了 @AutoUpdate，如果是则返回其全限定名和 functionName。
+     * 递归查找继承链中最近的标注了 @AutoUpdate 的祖先类。
      * @return Pair(父类全限定名, 父类 functionName)，无父类时返回 (null, null)
      */
     private fun resolveParentFromSuperTypes(classDecl: KSClassDeclaration): Pair<String?, String?> {
+        return resolveParentRecursive(classDecl, mutableSetOf())
+    }
+
+    private fun resolveParentRecursive(
+        classDecl: KSClassDeclaration,
+        visited: MutableSet<String>
+    ): Pair<String?, String?> {
         for (superType in classDecl.superTypes) {
             val superDecl = superType.resolve().declaration as? KSClassDeclaration ?: continue
             val qualifiedName = superDecl.qualifiedName?.asString() ?: continue
             if (qualifiedName == "kotlin.Any" || qualifiedName == "java.lang.Object"
                 || qualifiedName == "java.io.Serializable") continue
+            if (!visited.add(qualifiedName)) continue
+
             val autoUpdateAnno = superDecl.annotations.firstOrNull {
                 it.annotationType.resolve().declaration.qualifiedName?.asString() == AUTO_UPDATE_QUALIFIED_NAME
             }
@@ -102,6 +111,10 @@ class AutoUpdateGeneration(
                 val parentFuncName = autoUpdateAnno.arg<String>(AutoUpdate::functionName.name).orEmpty()
                 return qualifiedName to parentFuncName
             }
+
+            // 递归向上查找
+            val result = resolveParentRecursive(superDecl, visited)
+            if (result.first != null) return result
         }
         return null to null
     }

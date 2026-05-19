@@ -41,8 +41,8 @@ class WbKspProcessor(
     private val options: Map<String, String>
 ) : SymbolProcessor {
 
-    /** 按 Generation 类型追踪已生成状态，避免多轮处理时重复生成 */
-    private val generatedTypes = mutableSetOf<Class<out BaseGeneration>>()
+    /** 按 Generation 类名追踪已生成状态，避免多轮处理时重复生成（使用字符串 key 避免 ClassLoader 问题） */
+    private val generatedTypes = mutableSetOf<String>()
 
     /**
      * 所有功能模块的生成器列表。
@@ -65,17 +65,17 @@ class WbKspProcessor(
 
         // 阶段一：各模块收集注解符号（跳过已生成的模块）
         for (generation in generations) {
-            if (generation::class.java in generatedTypes) continue
+            if (generation::class.qualifiedName in generatedTypes) continue
             val unprocessed = generation.collect(resolver)
             allUnprocessed.addAll(unprocessed)
         }
 
         // 阶段二：各模块生成代码（跳过已生成的模块）
         for (generation in generations) {
-            if (generation::class.java in generatedTypes) continue
+            if (generation::class.qualifiedName in generatedTypes) continue
             if (generation.hasDataToGenerate()) {
                 generation.generate()
-                generatedTypes += generation::class.java
+                generation::class.qualifiedName?.let { generatedTypes += it }
             }
         }
 

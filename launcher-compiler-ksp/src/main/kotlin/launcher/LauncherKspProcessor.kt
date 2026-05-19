@@ -41,57 +41,32 @@ class LauncherKspProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val unprocessed = mutableListOf<KSAnnotated>()
 
-        // 收集需要处理的类
+        // 收集需要处理的类（合并扫描，减少 getSymbolsWithAnnotation 调用次数）
         val classesToProcess = mutableSetOf<KSClassDeclaration>()
 
-        // 扫描 @Boom 字段 → 取所在类
-        resolver.getSymbolsWithAnnotation(Boom::class.qualifiedName!!).forEach { symbol ->
-            if (!symbol.validate()) {
-                unprocessed += symbol
-                return@forEach
-            }
-            when (symbol) {
-                is KSPropertyDeclaration -> {
-                    val parent = symbol.parentDeclaration as? KSClassDeclaration
-                    if (parent != null) classesToProcess += parent
+        val targetAnnotations = listOf(
+            Boom::class.qualifiedName!!,
+            MakeResult::class.qualifiedName!!,
+            ParentCls::class.qualifiedName!!,
+            IncludeParentBoom::class.qualifiedName!!,
+            Router::class.qualifiedName!!
+        )
+
+        for (annotationName in targetAnnotations) {
+            resolver.getSymbolsWithAnnotation(annotationName).forEach { symbol ->
+                if (!symbol.validate()) {
+                    unprocessed += symbol
+                    return@forEach
+                }
+                when (symbol) {
+                    is KSPropertyDeclaration -> {
+                        // @Boom 标注在属性上，取所在类
+                        val parent = symbol.parentDeclaration as? KSClassDeclaration
+                        if (parent != null) classesToProcess += parent
+                    }
+                    is KSClassDeclaration -> classesToProcess += symbol
                 }
             }
-        }
-
-        // 扫描 @MakeResult 类
-        resolver.getSymbolsWithAnnotation(MakeResult::class.qualifiedName!!).forEach { symbol ->
-            if (!symbol.validate()) {
-                unprocessed += symbol
-                return@forEach
-            }
-            if (symbol is KSClassDeclaration) classesToProcess += symbol
-        }
-
-        // 扫描 @ParentCls 类
-        resolver.getSymbolsWithAnnotation(ParentCls::class.qualifiedName!!).forEach { symbol ->
-            if (!symbol.validate()) {
-                unprocessed += symbol
-                return@forEach
-            }
-            if (symbol is KSClassDeclaration) classesToProcess += symbol
-        }
-
-        // 扫描 @IncludeParentBoom 类
-        resolver.getSymbolsWithAnnotation(IncludeParentBoom::class.qualifiedName!!).forEach { symbol ->
-            if (!symbol.validate()) {
-                unprocessed += symbol
-                return@forEach
-            }
-            if (symbol is KSClassDeclaration) classesToProcess += symbol
-        }
-
-        // 扫描 @Router 类
-        resolver.getSymbolsWithAnnotation(Router::class.qualifiedName!!).forEach { symbol ->
-            if (!symbol.validate()) {
-                unprocessed += symbol
-                return@forEach
-            }
-            if (symbol is KSClassDeclaration) classesToProcess += symbol
         }
 
         // 处理每个类
@@ -107,8 +82,20 @@ class LauncherKspProcessor(
         val javaFile = classBinding.getClassGeneration().brewJava()
 
         val containingFile = classDecl.containingFile ?: return
+
+        // 如果标注了 @IncludeParentBoom，将父类文件也加入 dependencies，确保增量编译正确
+        val hasIncludeParentBoom = classDecl.annotations.any {
+            it.shortName.asString() == IncludeParentBoom::class.simpleName
+        }
+        val sourceFiles = if (hasIncludeParentBoom) {
+            val parentFiles = collectParentContainingFiles(classDecl)
+            (listOf(containingFile) + parentFiles).distinct().toTypedArray()
+        } else {
+            arrayOf(containingFile)
+        }
+
         val file = codeGenerator.createNewFile(
-            dependencies = Dependencies(aggregating = false, containingFile),
+            dependencies = Dependencies(aggregating = false, *sourceFiles),
             packageName = javaFile.packageName,
             fileName = javaFile.typeSpec.name,
             extensionName = "java"
@@ -124,7 +111,7 @@ class LauncherKspProcessor(
             classBinding.bindingClassName = routerBindingClassName
             val routerJavaFile = RouterGeneration(classBinding).brewJava()
             val routerFile = codeGenerator.createNewFile(
-                dependencies = Dependencies(aggregating = false, containingFile),
+                dependencies = Dependencies(aggregating = false, *sourceFiles),
                 packageName = routerJavaFile.packageName,
                 fileName = routerJavaFile.typeSpec.name,
                 extensionName = "java"
@@ -133,5 +120,18 @@ class LauncherKspProcessor(
                 routerJavaFile.writeTo(writer)
             }
         }
+    }
+
+    /**
+     * 收集类继承链中所有父类的 containingFile（用于增量编译依赖追踪）
+     */
+    private fun collectParentContainingFiles(classDecl: KSClassDeclaration): List<com.google.devtools.ksp.symbol.KSFile> {
+        val files = mutableListOf<com.google.devtools.ksp.symbol.KSFile>()
+        var superClass = classDecl.superTypes.firstOrNull()?.resolve()?.declaration as? KSClassDeclaration
+        while (superClass != null && superClass.qualifiedName?.asString() != "java.lang.Object") {
+            superClass.containingFile?.let { files.add(it) }
+            superClass = superClass.superTypes.firstOrNull()?.resolve()?.declaration as? KSClassDeclaration
+        }
+        return files
     }
 }

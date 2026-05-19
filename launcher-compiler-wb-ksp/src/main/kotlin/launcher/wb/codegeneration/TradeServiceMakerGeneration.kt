@@ -56,6 +56,9 @@ class TradeServiceMakerGeneration(
     /** 扫描结果：每个注解对应的顶层接口列表 */
     private val scanResults = mutableListOf<TradeServiceMakerScanResult>()
 
+    /** isSubtypeOf 结果缓存：key = "qualifiedName -> baseQualifiedName" */
+    private val subtypeCache = mutableMapOf<String, Boolean>()
+
     override fun collect(resolver: Resolver): List<KSAnnotated> {
         val unprocessed = mutableListOf<KSAnnotated>()
 
@@ -226,12 +229,18 @@ class TradeServiceMakerGeneration(
     }
 
     /**
-     * 检查接口是否直接或间接继承自指定的基础接口
+     * 检查接口是否直接或间接继承自指定的基础接口（带缓存）
      */
     private fun isSubtypeOf(declaration: KSClassDeclaration, baseQualifiedName: String): Boolean {
-        return declaration.getAllSuperTypes().any {
+        val declName = declaration.qualifiedName?.asString() ?: return false
+        val cacheKey = "$declName -> $baseQualifiedName"
+        subtypeCache[cacheKey]?.let { return it }
+
+        val result = declaration.getAllSuperTypes().any {
             it.declaration.qualifiedName?.asString() == baseQualifiedName
         }
+        subtypeCache[cacheKey] = result
+        return result
     }
 
     // ======================== 顶层接口筛选 ========================

@@ -28,6 +28,12 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
     private val checkQualifiedName = AutoUpdateCheck::class.qualifiedName!!
     private val alwaysQualifiedName = AutoUpdateAlways::class.qualifiedName!!
 
+    /** 文件内容缓存：避免同一文件被多个属性重复读取 */
+    private val fileContentCache = mutableMapOf<String, List<String>>()
+
+    /** 父类属性名缓存：避免多个子类共享同一父类时重复遍历 */
+    private val parentPropertyNamesCache = mutableMapOf<String, Set<String>>()
+
     /**
      * 收集类声明的属性，过滤掉 @AutoUpdateIgnore、static、companion 等。
      */
@@ -35,8 +41,8 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
         val result = mutableListOf<PropertyInfo>()
         val collectedNames = mutableSetOf<String>()
 
-        // 收集父类所有属性名（用于排除继承的属性）
-        val parentPropertyNames = collectParentPropertyNames(classDecl)
+        // 收集父类所有属性名（用于排除继承的属性），带缓存
+        val parentPropertyNames = collectParentPropertyNamesCached(classDecl)
 
         // 第一步：从 getAllProperties() 收集（对 Kotlin 类有效，对 Java public 字段有效）
         for (prop in classDecl.getAllProperties()) {
@@ -56,6 +62,14 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
         }
 
         return result
+    }
+
+    /**
+     * 带缓存的父类属性名收集
+     */
+    private fun collectParentPropertyNamesCached(classDecl: KSClassDeclaration): Set<String> {
+        val key = classDecl.qualifiedName?.asString() ?: return collectParentPropertyNames(classDecl)
+        return parentPropertyNamesCache.getOrPut(key) { collectParentPropertyNames(classDecl) }
     }
 
     /**
@@ -277,14 +291,17 @@ class AutoUpdatePropertyCollector(private val logger: KSPLogger) {
         if (!file.exists()) return null
 
         val propName = prop.simpleName.asString()
-        val lines = file.readLines()
+        val lines = fileContentCache.getOrPut(filePath) { file.readLines() }
 
-        // 查找属性声明行
+        // 对属性名做正则转义，防止特殊字符注入
+        val escapedPropName = Regex.escape(propName)
+        // 查找属性声明行（支持泛型类型声明如 List<String>）
+        val pattern = Regex("""(?:var|val)\s+$escapedPropName\s*(?::\s*[^\s=]+(?:<[^>]*>)?(?:\?)?)\s*=\s*(.+)""")
+        val patternNoType = Regex("""(?:var|val)\s+$escapedPropName\s*=\s*(.+)""")
+
         for (line in lines) {
             val trimmed = line.trim()
-            // 匹配 var/val propName 开头的声明
-            val pattern = Regex("""(?:var|val)\s+$propName\s*(?::\s*\S+)?\s*=\s*(.+)""")
-            val match = pattern.find(trimmed) ?: continue
+            val match = pattern.find(trimmed) ?: patternNoType.find(trimmed) ?: continue
             val valueStr = match.groupValues[1].trim()
             // 去除行尾注释
             val cleanValue = valueStr.split("//").first().trim()
