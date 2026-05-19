@@ -4,6 +4,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.buildCodeBlock
 
 /**
@@ -51,6 +52,9 @@ class AutoUpdateCodeBuilder {
             builder.addImport(parentPkg, parentFuncName)
         }
 
+        // 添加 AutoConvertLifecycle import
+        builder.addImport("wb.bean", "AutoConvertLifecycle")
+
         builder.addFunction(
             buildUpdateFunction(funcName, targetClass, properties, target.parentClassName, target.parentFunctionName, target.stringCheck)
         )
@@ -86,6 +90,10 @@ class AutoUpdateCodeBuilder {
     ): FunSpec {
         val hasParent = !parentClassName.isNullOrEmpty()
 
+        val lifecycleType = ClassName("wb.bean", "AutoConvertLifecycle")
+            .parameterizedBy(targetClass, targetClass)
+            .copy(nullable = true)
+
         val builder = FunSpec.builder(funcName)
             .receiver(targetClass)
             .addParameter("from", targetClass)
@@ -98,6 +106,12 @@ class AutoUpdateCodeBuilder {
             )
         }
 
+        builder.addParameter(
+            ParameterSpec.builder("updater", lifecycleType)
+                .defaultValue("null")
+                .build()
+        )
+
         builder.addCode(buildCodeBlock {
             if (hasParent) {
                 val parentSimpleName = parentClassName!!.substringAfterLast(".")
@@ -107,6 +121,9 @@ class AutoUpdateCodeBuilder {
                 endControlFlow()
                 addStatement("")
             }
+
+            addStatement("updater?.onStart(this, from)")
+            addStatement("")
 
             val sorted = properties.sortedBy { it.name }
             val active = sorted.filter { !it.ignored }
@@ -123,6 +140,9 @@ class AutoUpdateCodeBuilder {
                     addStatement("// ${prop.ignoreReason}: ${prop.name}")
                 }
             }
+
+            addStatement("")
+            addStatement("updater?.onEnd(this, from)")
         })
 
         return builder.build()

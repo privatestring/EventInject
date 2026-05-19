@@ -98,10 +98,12 @@ class ConvertCodeBuilder {
                 // 父类未匹配注释
                 if (matchResult.parentUnmatched.isNotEmpty()) {
                     addStatement("")
+                    addStatement("//<editor-fold desc=\"缺少的属性\">")
                     addStatement("// 以下父类目标属性未能自动映射：")
                     for (prop in matchResult.parentUnmatched) {
                         addStatement("// - ${prop.name}: ${prop.typeName}（${prop.reason}）")
                     }
+                    addStatement("//</editor-fold>")
                 }
             })
             .build()
@@ -115,6 +117,7 @@ class ConvertCodeBuilder {
         if (unmatched.isEmpty() && ignored.isEmpty()) return
 
         builder.addStatement("")
+        builder.addStatement("//<editor-fold desc=\"缺少的属性\">")
         if (unmatched.isNotEmpty()) {
             builder.addStatement("// 以下目标属性在源类中未找到匹配：")
             for (prop in unmatched) {
@@ -127,5 +130,6 @@ class ConvertCodeBuilder {
                 builder.addStatement("// - $name")
             }
         }
+        builder.addStatement("//</editor-fold>")
     }
 }

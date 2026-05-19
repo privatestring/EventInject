@@ -6,7 +6,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.joker.annotation.EventBridge
 import com.joker.annotation.EventHandle
 import com.joker.event.databinding.ActivityMainBinding
+import com.joker.event.update.TickerUpdateBean
+import com.joker.event.update.updateTickerUpdateBeanFields
 import com.mei.models.EventInjectImpl
+import wb.bean.AutoConvertLifecycle
 
 @EventBridge("haha://tab_selected", "haha://xxx")
 class MainActivity : AppCompatActivity(), EventHandle {
@@ -21,6 +24,19 @@ class MainActivity : AppCompatActivity(), EventHandle {
             100
         }
         binding.mainPost.setOnClickListener { v ->
+            TickerUpdateBean().updateTickerUpdateBeanFields(
+                TickerUpdateBean().apply { tickerId = "xxx" },
+                updater = object : AutoConvertLifecycle<TickerUpdateBean, TickerUpdateBean> {
+                    override fun onStart(source: TickerUpdateBean, target: TickerUpdateBean) {
+                        super.onStart(source, target)
+                        Log.e("jokerInfo", "Start ${source.tickerId}: ");
+                    }
+
+                    override fun onEnd(source: TickerUpdateBean, target: TickerUpdateBean) {
+                        super.onEnd(source, target)
+                        Log.e("jokerInfo", "End ${source.tickerId}: ");
+                    }
+                })
 
             EventInjectImpl().postEventInject("haha://tab_selected", back)
         }
