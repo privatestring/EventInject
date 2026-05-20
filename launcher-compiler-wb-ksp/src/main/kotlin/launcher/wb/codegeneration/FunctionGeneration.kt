@@ -122,6 +122,25 @@ class FunctionGeneration(
             fileSpec = fileSpec,
             dependencies = buildDependencies(aggregating = true, functionClasses)
         )
+        generateReport(distinctGroups)
+    }
+
+    private fun generateReport(distinctGroups: List<String>) {
+        val lines = mutableListOf<String>()
+        lines += "Functions       : ${functionClasses.size} registrations"
+        if (distinctGroups.isNotEmpty()) {
+            lines += "Groups          : ${distinctGroups.size} (${distinctGroups.joinToString(", ")})"
+            distinctGroups.forEach { group ->
+                val count = functionClasses.count { classDecl ->
+                    val anno = classDecl.annotations.firstOrNull { it.shortName.asString() == "Function" }
+                    @Suppress("UNCHECKED_CAST")
+                    val groups = anno?.arguments?.firstOrNull { it.name?.asString() == "group" }?.value as? List<String> ?: emptyList()
+                    groups.contains(group)
+                }
+                lines += "  $group: $count functions"
+            }
+        }
+        emitReport("FunctionFactory", "Global", lines, "Total: ${functionClasses.size} functions, ${distinctGroups.size} groups")
     }
 
     private fun brewKotlin(distinctGroups: List<String>): FileSpec? {

@@ -102,4 +102,27 @@ abstract class BaseGeneration(
         return split("-", "_")
             .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
     }
+
+    /**
+     * 通用报告输出：warn 日志（编译控制台可见，CI 可从日志收集）。
+     *
+     * @param tag 处理器标识，如 "FunctionFactory"
+     * @param moduleName 模块名
+     * @param lines 每行统计内容
+     * @param summary 汇总行
+     */
+    protected fun emitReport(
+        tag: String,
+        moduleName: String,
+        lines: List<String>,
+        summary: String
+    ) {
+        val report = buildString {
+            appendLine("[ksp] [$tag] ═══ Module: $moduleName ═══")
+            lines.forEach { appendLine("  $it") }
+            appendLine("  ${"─".repeat(50)}")
+            appendLine("  $summary")
+        }
+        logger.warn(report)
+    }
 }

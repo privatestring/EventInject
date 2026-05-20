@@ -8,30 +8,35 @@ import wb.service.ServiceRegistry
 /**
  * ServiceAggregator 功能测试用例
  *
- * 模拟真实项目中多种 SPI 注册场景：
- * - IViewProvider：按 key 查找的视图提供者（含 priority 排序验证）
- * - IFragmentProvider：按 key 查找的 Fragment 提供者
- * - IService：按子接口类型查找的服务
- * - AbTestProvider：AB 测试 key 提供者
- * - object 单例：验证 object 不加 () 直接引用
- * - priority 排序：验证高优先级在前，同优先级按类名排序
+ * 验证场景：
+ * - IViewProvider：eager 模式，按 key 查找（含 priority 排序）
+ * - IFragmentProvider：eager 模式，按 key 查找
+ * - IService：lazy 模式（ServiceEntry），按子接口类型按需实例化
+ * - AbTestProvider：eager 模式，收集所有 keys
+ * - object 单例：eager 直接引用，lazy 包装为 ServiceEntry
+ * - priority 排序：高优先级在前，同优先级按类名排序
  *
  * 预期生成产物：
- * 1. com.webull.service.App_ServiceAggregator.kt
+ * 1. com.webull.service.{Module}_ServiceAggregator.kt
  * 2. META-INF/services/com.joker.event.service.IViewAggregator
  * 3. META-INF/services/com.joker.event.service.IServiceAggregator
- * 4. META-INF/service-registry/App.json（跨模块校验元数据）
- * 5. META-INF/service-registry/App_report.txt（统计报告）
+ * 4. META-INF/service-registry/{Module}.json（跨模块校验元数据）
+ * 5. META-INF/service-registry/{Module}_report.txt（统计报告）
  *
  * IViewProvider 预期排序（priority 降序 → 类名升序）：
  * 1. MarketBannerViewProvider (priority=200, object)
  * 2. AlertCardViewProvider (priority=100, class)
  * 3. EconomicEventViewProvider (priority=100, class)
  * 4. HotSearchRankingCardViewProvider (priority=0, class)
+ *
+ * IService 预期生成（lazy 模式）：
+ * - ServiceEntry(AppInfoService::class.java) { AppInfoService(context) }
+ * - ServiceEntry(BondService::class.java) { BondService(context) }
+ * - ServiceEntry(RankService::class.java) { RankService(context) }
  */
 
 // ============================================================
-// IViewProvider 实现（4 个，含 priority 测试）
+// IViewProvider 实现（4 个，eager + priority）
 // ============================================================
 
 @ServiceRegistry(IViewProvider::class)
@@ -55,7 +60,7 @@ class AlertCardViewProvider : IViewProvider {
 }
 
 // ============================================================
-// IFragmentProvider 实现（2 个）
+// IFragmentProvider 实现（2 个，eager）
 // ============================================================
 
 @ServiceRegistry(IFragmentProvider::class)
@@ -69,7 +74,7 @@ class MarketHomeFragmentProvider : IFragmentProvider {
 }
 
 // ============================================================
-// IService 实现（3 个，含子接口）
+// IService 实现（3 个，lazy 模式，含子接口）
 // ============================================================
 
 /** 模拟业务子接口 */
@@ -87,7 +92,7 @@ class RankService(context: Context) : IRankService
 class AppInfoService(context: Context) : IAppInfoService
 
 // ============================================================
-// AbTestProvider 实现（2 个）
+// AbTestProvider 实现（2 个，eager）
 // ============================================================
 
 @ServiceRegistry(AbTestProvider::class)

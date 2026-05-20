@@ -86,6 +86,16 @@ class MarketViewRouteGeneration(
             fileSpec = fileSpec,
             dependencies = buildDependencies(aggregating = true, viewClasses)
         )
+        generateReport()
+    }
+
+    private fun generateReport() {
+        val withDesc = viewClasses.count { getViewDesc(it).isNotBlank() }
+        val lines = mutableListOf<String>()
+        lines += "View routes     : ${viewClasses.size} registrations"
+        lines += "With desc       : $withDesc"
+        lines += "Without desc    : ${viewClasses.size - withDesc}"
+        emitReport("MarketViewRoute", "Global", lines, "Total: ${viewClasses.size} view routes")
     }
 
     private fun brewKotlin(): FileSpec {

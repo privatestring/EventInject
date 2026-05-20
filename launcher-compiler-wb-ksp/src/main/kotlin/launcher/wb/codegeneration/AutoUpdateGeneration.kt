@@ -82,6 +82,18 @@ class AutoUpdateGeneration(
                 dependencies = buildDependencies(aggregating = false, listOf(target.classDecl))
             )
         }
+        generateReport()
+    }
+
+    private fun generateReport() {
+        val withParent = targetClasses.count { it.parentClassName != null }
+        val lines = mutableListOf<String>()
+        lines += "Classes         : ${targetClasses.size} annotated"
+        lines += "With parent     : $withParent (inherits update logic)"
+        lines += "Standalone      : ${targetClasses.size - withParent}"
+        // 提取模块名（取第一个类的路径）
+        val moduleName = targetClasses.firstOrNull()?.classDecl?.let { extractModuleName(it) } ?: "Unknown"
+        emitReport("AutoUpdate", moduleName, lines, "Total: ${targetClasses.size} update functions generated")
     }
 
     /**

@@ -78,6 +78,18 @@ class AutoConvertGeneration(
                 )
             )
         }
+        generateReport()
+    }
+
+    private fun generateReport() {
+        val sourceClasses = targets.map { it.sourceDecl.qualifiedName?.asString() }.distinct()
+        val targetClasses = targets.map { it.targetDecl.qualifiedName?.asString() }.distinct()
+        val lines = mutableListOf<String>()
+        lines += "Converters      : ${targets.size} annotated"
+        lines += "Source classes   : ${sourceClasses.size} distinct"
+        lines += "Target classes   : ${targetClasses.size} distinct"
+        val moduleName = targets.firstOrNull()?.converterDecl?.let { extractModuleName(it) } ?: "Unknown"
+        emitReport("AutoConvert", moduleName, lines, "Total: ${targets.size} convert functions generated")
     }
 
     /**

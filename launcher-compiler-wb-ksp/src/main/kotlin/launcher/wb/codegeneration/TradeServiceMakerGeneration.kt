@@ -88,6 +88,21 @@ class TradeServiceMakerGeneration(
         for (result in scanResults) {
             generateForResult(result)
         }
+        generateReport()
+    }
+
+    private fun generateReport() {
+        for (result in scanResults) {
+            val data = result.data
+            val lines = mutableListOf<String>()
+            lines += "Target          : ${data.targetPackageName}.${data.targetClassName}"
+            lines += "Scanned         : ${result.allSubInterfaces.size} sub-interfaces"
+            lines += "Top-level       : ${result.topLevelInterfaces.size} interfaces"
+            lines += "Additional      : ${data.additionalInterfaces.size} interfaces"
+            val moduleName = data.targetClassName
+            val total = result.topLevelInterfaces.size + data.additionalInterfaces.size
+            emitReport("TradeServiceMaker", moduleName, lines, "Total: $total super-interfaces in generated aggregator")
+        }
     }
 
     /**

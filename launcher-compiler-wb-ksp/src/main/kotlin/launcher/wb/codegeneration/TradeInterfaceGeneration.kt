@@ -93,6 +93,15 @@ class TradeInterfaceGeneration(
             fileSpec = fileSpec,
             dependencies = buildDependencies(aggregating = true, allClasses)
         )
+        generateReport(name)
+    }
+
+    private fun generateReport(name: String) {
+        val total = regularInterfaces.size + innerInterfaces.size
+        val lines = mutableListOf<String>()
+        lines += "Regular         : ${regularInterfaces.size} interfaces"
+        lines += "Inner           : ${innerInterfaces.size} interfaces"
+        emitReport("TradeInterface", name, lines, "Total: $total interface bindings")
     }
 
     /**

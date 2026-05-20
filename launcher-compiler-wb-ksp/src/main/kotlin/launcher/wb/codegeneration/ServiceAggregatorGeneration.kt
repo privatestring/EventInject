@@ -11,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import wb.service.ServiceEntry
 import wb.service.ServiceGroup
 import wb.service.ServiceRegistry
 
@@ -22,18 +23,16 @@ import wb.service.ServiceRegistry
  * ServiceAggregator 代码生成器。
  *
  * 扫描 @ServiceRegistry 注解，按注解参数分组，生成模块级聚合类 + SPI 注册文件。
- * 映射关系通过 @ServiceAggregatorMethod 注解动态获取，支持多聚合接口。
+ *
+ * 核心机制：
+ * - 通过 @ServiceGroup 注解动态发现聚合接口与 SPI 接口的映射关系
+ * - 通过方法返回类型自动判断生成模式：List<X> → eager，List<ServiceEntry<X>> → lazy
  *
  * 生成产物：
- * - {ModuleName}_ServiceAggregator.kt（实现所有聚合接口）
- * - META-INF/services/{每个聚合接口}（SPI 注册文件）
- * - META-INF/service-registry/{module}.json（元数据，用于跨模块校验）
- * - META-INF/service-registry/{module}_report.txt（统计报告）
- *
- * 功能特性：
- * - priority 排序：数值越大越靠前，同优先级按类名字母序
- * - 跨模块 Key 重复检测：生成 JSON 元数据供 Gradle Task 汇总校验
- * - 编译期统计报告：输出注册数量摘要
+ * - {ModuleName}_ServiceAggregator.kt — 实现所有聚合接口
+ * - META-INF/services/{聚合接口} — SPI 注册文件
+ * - META-INF/service-registry/{module}.json — 跨模块校验元数据
+ * - META-INF/service-registry/{module}_report.txt — 统计报告
  */
 class ServiceAggregatorGeneration(
     codeGenerator: CodeGenerator,
@@ -42,20 +41,30 @@ class ServiceAggregatorGeneration(
 ) : BaseGeneration(codeGenerator, logger) {
 
     companion object {
+        /** @ServiceRegistry 全限定名 */
         private val ANNOTATION_NAME = ServiceRegistry::class.qualifiedName!!
+        /** @ServiceGroup 全限定名 */
         private val METHOD_ANNOTATION_NAME = ServiceGroup::class.qualifiedName!!
+        /** ServiceEntry 全限定名，用于返回类型检测 */
+        private val SERVICE_ENTRY_QUALIFIED = ServiceEntry::class.qualifiedName!!
+        /** ServiceEntry 的 KotlinPoet ClassName */
+        private val SERVICE_ENTRY_CLASS = ClassName.bestGuess(SERVICE_ENTRY_QUALIFIED)
     }
 
+    /** 按目标接口分组的注册信息 */
     private val grouped = mutableMapOf<String, MutableList<RegistrationInfo>>()
+    /** @ServiceGroup 方法映射表：目标接口 → 方法信息 */
     private var serviceTypeMap = emptyMap<String, ServiceTypeInfo>()
+    /** 所有发现的聚合接口全限定名 */
     private val aggregatorInterfaces = mutableSetOf<String>()
     private var moduleName: String? = null
+
+    // ======================== 收集阶段 ========================
 
     override fun collect(resolver: Resolver): List<KSAnnotated> {
         if (moduleName == null) {
             options[OPTION_MODULE_NAME]?.takeIf { it.isNotEmpty() }?.let { moduleName = it }
         }
-
         if (serviceTypeMap.isEmpty()) {
             serviceTypeMap = buildServiceTypeMap(resolver)
         }
@@ -64,28 +73,17 @@ class ServiceAggregatorGeneration(
             .filterIsInstance<KSClassDeclaration>().toList()
 
         if (symbols.isNotEmpty() && serviceTypeMap.isEmpty()) {
-            logger.error("ServiceAggregator: Found @ServiceRegistry but no @ServiceAggregatorMethod discovered.")
-            return emptyList()
+            // 第一轮可能还没发现 @ServiceGroup（多轮处理），延迟到下一轮
+            logger.warn("ServiceAggregator: Found @ServiceRegistry but no @ServiceGroup yet, deferring.")
+            return symbols
         }
 
         for (decl in symbols) {
             if (moduleName == null) moduleName = extractModuleName(decl)
-
-            val annotation = decl.annotations
-                .firstOrNull { it.shortName.asString() == "ServiceRegistry" }
-                ?: continue
-
-            val targetInterface = annotation.arguments
-                .firstOrNull { it.name?.asString() == "value" }?.value
-                ?.let { (it as? KSType)?.declaration?.qualifiedName?.asString() }
-                ?: continue
-
-            val priority = annotation.arguments
-                .firstOrNull { it.name?.asString() == "priority" }?.value as? Int ?: 0
+            val (targetInterface, priority) = parseRegistryAnnotation(decl) ?: continue
 
             if (targetInterface in serviceTypeMap) {
-                grouped.getOrPut(targetInterface) { mutableListOf() }
-                    .add(RegistrationInfo(decl, priority))
+                grouped.getOrPut(targetInterface) { mutableListOf() }.add(RegistrationInfo(decl, priority))
             } else {
                 logger.error("ServiceAggregator: @ServiceRegistry($targetInterface) unmatched. Class: ${decl.qualifiedName?.asString()}")
             }
@@ -95,6 +93,8 @@ class ServiceAggregatorGeneration(
 
     override fun hasDataToGenerate(): Boolean = grouped.isNotEmpty() && moduleName != null
 
+    // ======================== 生成阶段 ========================
+
     override fun generate() {
         val name = moduleName ?: return
         val className = "${name}_ServiceAggregator"
@@ -103,14 +103,14 @@ class ServiceAggregatorGeneration(
         generateAggregatorClass(packageName, className)
         generateSpiFiles(packageName, className)
         generateMetadataJson(name)
-        generateStatisticsReport(name)
-        printStatisticsLog(name)
+        generateReport(name)
     }
 
     // ======================== 映射发现 ========================
 
     /**
-     * 遍历源文件中的接口，查找带 @ServiceAggregatorMethod 的方法，建立映射。
+     * 遍历源文件中的接口，查找带 @ServiceGroup 的方法，建立映射。
+     * 同时通过方法返回类型判断 lazy 模式。
      */
     private fun buildServiceTypeMap(resolver: Resolver): Map<String, ServiceTypeInfo> {
         val map = mutableMapOf<String, ServiceTypeInfo>()
@@ -126,13 +126,13 @@ class ServiceAggregatorGeneration(
                     } ?: continue
 
                     found = true
-                    val targetType = anno.arguments.firstOrNull()?.value as? KSType ?: continue
+                    val targetType = anno.arguments.firstOrNull { it.name?.asString() == "value" }?.value as? KSType ?: continue
                     val targetInterface = targetType.declaration.qualifiedName?.asString() ?: continue
-
+                    val isLazy = isServiceEntryReturnType(func.returnType?.resolve())
                     val params = func.parameters.map { p ->
                         (p.name?.asString() ?: "arg") to (p.type.resolve().declaration.qualifiedName?.asString() ?: "Any")
                     }
-                    map[targetInterface] = ServiceTypeInfo(func.simpleName.asString(), targetInterface, params)
+                    map[targetInterface] = ServiceTypeInfo(func.simpleName.asString(), targetInterface, params, isLazy)
                 }
                 if (found) decl.qualifiedName?.asString()?.let { aggregatorInterfaces.add(it) }
             }
@@ -140,7 +140,27 @@ class ServiceAggregatorGeneration(
         return map
     }
 
-    // ======================== 代码生成 ========================
+    /** 判断返回类型是否为 List<ServiceEntry<X>>，是则为 lazy 模式 */
+    private fun isServiceEntryReturnType(returnType: KSType?): Boolean {
+        if (returnType == null) return false
+        val decl = returnType.declaration.qualifiedName?.asString()
+        if (decl != "kotlin.collections.List" && decl != "java.util.List") return false
+        val typeArg = returnType.arguments.firstOrNull()?.type?.resolve() ?: return false
+        return typeArg.declaration.qualifiedName?.asString() == SERVICE_ENTRY_QUALIFIED
+    }
+
+    /** 解析 @ServiceRegistry 注解，返回 (目标接口, priority) */
+    private fun parseRegistryAnnotation(decl: KSClassDeclaration): Pair<String, Int>? {
+        val annotation = decl.annotations.firstOrNull { it.shortName.asString() == "ServiceRegistry" } ?: return null
+        val targetInterface = annotation.arguments
+            .firstOrNull { it.name?.asString() == "value" }?.value
+            ?.let { (it as? KSType)?.declaration?.qualifiedName?.asString() } ?: return null
+        val priority = annotation.arguments
+            .firstOrNull { it.name?.asString() == "priority" }?.value as? Int ?: 0
+        return targetInterface to priority
+    }
+
+    // ======================== 聚合类生成 ========================
 
     private fun generateAggregatorClass(packageName: String, className: String) {
         if (aggregatorInterfaces.isEmpty()) return
@@ -148,85 +168,87 @@ class ServiceAggregatorGeneration(
         val typeSpec = TypeSpec.classBuilder(className)
         aggregatorInterfaces.sorted().forEach { typeSpec.addSuperinterface(ClassName.bestGuess(it)) }
 
-        grouped.keys.sorted().forEach { interfaceName ->
-            val registrations = grouped[interfaceName] ?: return@forEach
-            val typeInfo = serviceTypeMap[interfaceName] ?: return@forEach
-
-            // 按 priority 降序，同优先级按类名升序
-            val sortedRegistrations = registrations.sortedWith(
-                compareByDescending<RegistrationInfo> { it.priority }
-                    .thenBy { it.declaration.qualifiedName?.asString() ?: "" }
+        for (interfaceName in grouped.keys.sorted()) {
+            val registrations = grouped[interfaceName] ?: continue
+            val typeInfo = serviceTypeMap[interfaceName] ?: continue
+            val sorted = registrations.sortedWith(
+                compareByDescending<RegistrationInfo> { it.priority }.thenBy { it.declaration.qualifiedName?.asString() ?: "" }
             )
-
-            val funSpec = FunSpec.builder(typeInfo.methodName)
-                .addModifiers(KModifier.OVERRIDE)
-                .returns(List::class.asClassName().parameterizedBy(ClassName.bestGuess(typeInfo.returnType)))
-
-            // 参数签名
-            val paramNames = typeInfo.parameters.map { (name, type) ->
-                funSpec.addParameter(name, ClassName.bestGuess(type))
-                name
-            }
-
-            // 有参数时校验构造函数
-            if (paramNames.isNotEmpty()) validateConstructors(sortedRegistrations.map { it.declaration }, typeInfo)
-
-            // 方法体
-            val argsStr = paramNames.joinToString(", ")
-            funSpec.addCode(buildCodeBlock {
-                add("return listOf(\n")
-                indent()
-                sortedRegistrations.forEachIndexed { i, reg ->
-                    val decl = reg.declaration
-                    val implClass = ClassName(decl.packageName.asString(), decl.simpleName.asString())
-                    val comma = if (i < sortedRegistrations.size - 1) "," else ""
-                    when {
-                        decl.classKind == ClassKind.OBJECT -> add("%T$comma\n", implClass)
-                        paramNames.isEmpty() -> add("%T()$comma\n", implClass)
-                        else -> add("%T($argsStr)$comma\n", implClass)
-                    }
-                }
-                unindent()
-                add(")\n")
-            })
-
-            typeSpec.addFunction(funSpec.build())
+            typeSpec.addFunction(buildMethodForGroup(typeInfo, sorted))
         }
 
         val fileSpec = FileSpec.builder(packageName, className)
             .addFileComment("Generated by ServiceAggregator KSP Processor. Do not modify!")
             .addType(typeSpec.build())
             .build()
-
         writeKotlinFile(fileSpec, buildDependencies(true, grouped.values.flatten().map { it.declaration }))
     }
+
+    /** 根据 lazy/eager 模式构建对应方法 */
+    private fun buildMethodForGroup(typeInfo: ServiceTypeInfo, registrations: List<RegistrationInfo>): FunSpec {
+        val returnType = ClassName.bestGuess(typeInfo.returnType)
+        val listElementType = if (typeInfo.isLazy) SERVICE_ENTRY_CLASS.parameterizedBy(returnType) else returnType
+
+        val funSpec = FunSpec.builder(typeInfo.methodName)
+            .addModifiers(KModifier.OVERRIDE)
+            .returns(List::class.asClassName().parameterizedBy(listElementType))
+
+        val paramNames = typeInfo.parameters.map { (name, type) ->
+            funSpec.addParameter(name, ClassName.bestGuess(type)); name
+        }
+        if (paramNames.isNotEmpty()) validateConstructors(registrations.map { it.declaration }, typeInfo)
+
+        val argsStr = paramNames.joinToString(", ")
+        funSpec.addCode(buildCodeBlock {
+            add("return listOf(\n")
+            indent()
+            registrations.forEachIndexed { i, reg ->
+                val implClass = ClassName(reg.declaration.packageName.asString(), reg.declaration.simpleName.asString())
+                val comma = if (i < registrations.size - 1) ",\n" else "\n"
+                add(formatRegistration(reg.declaration, implClass, argsStr, typeInfo.isLazy))
+                add(comma)
+            }
+            unindent()
+            add(")\n")
+        })
+        return funSpec.build()
+    }
+
+    /** 格式化单个注册项的代码表达式 */
+    private fun formatRegistration(
+        decl: KSClassDeclaration, implClass: ClassName, argsStr: String, isLazy: Boolean
+    ): CodeBlock {
+        val isObject = decl.classKind == ClassKind.OBJECT
+        return if (isLazy) {
+            val body = if (isObject) "%T" else if (argsStr.isEmpty()) "%T()" else "%T($argsStr)"
+            CodeBlock.of("%T(%T::class.java) { $body }", SERVICE_ENTRY_CLASS, implClass, implClass)
+        } else {
+            when {
+                isObject -> CodeBlock.of("%T", implClass)
+                argsStr.isEmpty() -> CodeBlock.of("%T()", implClass)
+                else -> CodeBlock.of("%T($argsStr)", implClass)
+            }
+        }
+    }
+
+    // ======================== SPI 文件 ========================
 
     private fun generateSpiFiles(packageName: String, className: String) {
         aggregatorInterfaces.sorted().forEach { interfaceName ->
             codeGenerator.createNewFile(Dependencies(false), "META-INF.services", interfaceName, "")
-                .apply { write("$packageName.$className\n".toByteArray()) }
-                .close()
+                .apply { write("$packageName.$className\n".toByteArray()) }.close()
         }
     }
 
-    // ======================== 跨模块元数据生成 ========================
+    // ======================== 跨模块元数据 ========================
 
-    /**
-     * 生成 JSON 元数据文件，供 Gradle Task 汇总进行跨模块 key 重复检测。
-     * 输出路径：META-INF/service-registry/{module}.json
-     */
     private fun generateMetadataJson(name: String) {
-        val registrations = mutableListOf<String>()
-
-        grouped.keys.sorted().forEach { interfaceName ->
-            val regs = grouped[interfaceName] ?: return@forEach
-            regs.sortedBy { it.declaration.qualifiedName?.asString() }.forEach { reg ->
-                val decl = reg.declaration
-                val className = decl.qualifiedName?.asString() ?: return@forEach
-                val interfaceShortName = interfaceName.substringAfterLast(".")
-                val key = tryExtractKey(decl)
-                val keyField = if (key != null) ""","key":"$key"""" else ""
-                registrations.add("""    {"class":"$className","interface":"$interfaceShortName","priority":${reg.priority}$keyField}""")
+        val entries = grouped.keys.sorted().flatMap { interfaceName ->
+            val regs = grouped[interfaceName] ?: return@flatMap emptyList()
+            regs.sortedBy { it.declaration.qualifiedName?.asString() }.map { reg ->
+                val cls = reg.declaration.qualifiedName?.asString() ?: ""
+                val iface = interfaceName.substringAfterLast(".")
+                """    {"class":"$cls","interface":"$iface","priority":${reg.priority}}"""
             }
         }
 
@@ -234,83 +256,48 @@ class ServiceAggregatorGeneration(
             appendLine("{")
             appendLine("""  "module": "$name",""")
             appendLine("""  "registrations": [""")
-            append(registrations.joinToString(",\n"))
+            append(entries.joinToString(",\n"))
             appendLine()
             appendLine("  ]")
             append("}")
         }
 
         codeGenerator.createNewFile(Dependencies(false), "META-INF.service-registry", name, "json")
-            .apply { write(json.toByteArray()) }
-            .close()
-    }
-
-    /**
-     * 尝试从类声明中提取 key 属性的字符串常量值。
-     * 仅支持简单的字符串字面量赋值（如 override val key = "xxx"）。
-     */
-    private fun tryExtractKey(decl: KSClassDeclaration): String? {
-        // object 和 class 都可能有 key 属性
-        val keyProp = decl.getAllProperties().firstOrNull { it.simpleName.asString() == "key" }
-            ?: return null
-
-        // KSP 无法直接读取属性初始值，但可以尝试从源码文本中提取
-        // 这里返回 null 表示无法提取，依赖 @ServiceKey 注解或运行时检测
-        // 未来可通过 @ServiceKey 注解显式声明
-        return null
+            .apply { write(json.toByteArray()) }.close()
     }
 
     // ======================== 统计报告 ========================
 
-    /**
-     * 生成统计报告文件。
-     * 输出路径：META-INF/service-registry/{module}_report.txt
-     */
-    private fun generateStatisticsReport(name: String) {
-        val report = buildStatisticsText(name)
-
-        codeGenerator.createNewFile(Dependencies(false), "META-INF.service-registry", "${name}_report", "txt")
-            .apply { write(report.toByteArray()) }
-            .close()
-    }
-
-    /**
-     * 在编译日志中输出统计摘要。
-     */
-    private fun printStatisticsLog(name: String) {
-        val report = buildStatisticsText(name)
-        // 使用 warn 级别确保在编译输出中可见
+    private fun generateReport(name: String) {
+        val report = buildReport(name)
         logger.warn(report)
     }
 
-    private fun buildStatisticsText(name: String): String {
-        val sb = StringBuilder()
-        sb.appendLine("[ServiceAggregator] ═══ Module: $name ═══")
-
-        var totalClasses = 0
+    private fun buildReport(name: String): String = buildString {
+        appendLine("[ServiceAggregator] ═══ Module: $name ═══")
+        var total = 0
         var totalObjects = 0
 
         grouped.keys.sorted().forEach { interfaceName ->
             val regs = grouped[interfaceName] ?: return@forEach
-            val shortName = interfaceName.substringAfterLast(".")
+            val typeInfo = serviceTypeMap[interfaceName]
             val objects = regs.count { it.declaration.classKind == ClassKind.OBJECT }
-            val classes = regs.size - objects
-            totalClasses += classes
+            total += regs.size
             totalObjects += objects
 
-            val priorityInfo = regs.filter { it.priority != 0 }
-                .let { if (it.isNotEmpty()) ", ${it.size} with priority" else "" }
+            val tags = mutableListOf<String>()
+            tags += "${objects} objects"
+            tags += "${regs.size - objects} classes"
+            regs.count { it.priority != 0 }.takeIf { it > 0 }?.let { tags += "$it with priority" }
+            if (typeInfo?.isLazy == true) tags += "lazy"
 
-            sb.appendLine("  %-20s: %d registrations (%d objects, %d classes%s)".format(
-                shortName, regs.size, objects, classes, priorityInfo
+            appendLine("  %-20s: %d registrations (%s)".format(
+                interfaceName.substringAfterLast("."), regs.size, tags.joinToString(", ")
             ))
         }
-
-        sb.appendLine("  ${"─".repeat(50)}")
-        sb.appendLine("  Total: ${totalClasses + totalObjects} registrations (${totalObjects} objects, ${totalClasses} classes)")
-        sb.appendLine("  Aggregator interfaces: ${aggregatorInterfaces.size}")
-
-        return sb.toString()
+        appendLine("  ${"─".repeat(50)}")
+        appendLine("  Total: $total registrations ($totalObjects objects, ${total - totalObjects} classes)")
+        appendLine("  Aggregator interfaces: ${aggregatorInterfaces.size}")
     }
 
     // ======================== 校验 ========================
@@ -325,23 +312,20 @@ class ServiceAggregatorGeneration(
             if (actual != expected) {
                 logger.error(
                     "ServiceAggregator: ${decl.qualifiedName?.asString()} constructor($actual) " +
-                            "doesn't match @ServiceAggregatorMethod params($expected)"
+                            "doesn't match @ServiceGroup params($expected)"
                 )
             }
         }
     }
 }
 
-/**
- * 注册信息，包含类声明和优先级。
- */
-data class RegistrationInfo(
-    val declaration: KSClassDeclaration,
-    val priority: Int
-)
+/** 注册信息：类声明 + 优先级 */
+data class RegistrationInfo(val declaration: KSClassDeclaration, val priority: Int)
 
+/** @ServiceGroup 方法信息：方法名、返回类型、参数列表、是否 lazy */
 data class ServiceTypeInfo(
     val methodName: String,
     val returnType: String,
-    val parameters: List<Pair<String, String>> = emptyList()
+    val parameters: List<Pair<String, String>> = emptyList(),
+    val isLazy: Boolean = false
 )

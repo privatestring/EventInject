@@ -1,5 +1,7 @@
 package com.joker.event.service
 
+import android.content.Context
+import wb.service.ServiceEntry
 import wb.service.ServiceGroup
 
 /**
@@ -16,11 +18,14 @@ interface IViewAggregator {
 
 /**
  * 服务与 AB 测试聚合接口。
+ *
+ * provideServiceEntries 返回 List<ServiceEntry<IService>>，
+ * Processor 自动识别为 lazy 模式，生成 ServiceEntry 工厂。
  */
 interface IServiceAggregator {
 
     @ServiceGroup(IService::class)
-    fun provideServices(context: android.content.Context): List<IService> = emptyList()
+    fun provideServiceEntries(context: Context): List<ServiceEntry<IService>> = emptyList()
 
     @ServiceGroup(AbTestProvider::class)
     fun provideAbTestProviders(): List<AbTestProvider> = emptyList()
