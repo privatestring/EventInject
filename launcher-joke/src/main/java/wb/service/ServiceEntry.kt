@@ -17,6 +17,17 @@ class ServiceEntry<T>(
     val instance: T by lazy { factory() }
 
     /** 判断实现类是否为指定类型（支持子接口匹配） */
-    fun isType(targetClass: Class<*>): Boolean =
-        targetClass.isAssignableFrom(implClass)
+    fun isType(targetClass: Class<*>): Boolean = targetClass.isAssignableFrom(implClass)
+}
+
+
+/**
+ * 通用 Provider 标记接口。
+ *
+ * 业务层自定义的 Provider 接口继承此接口即可通过 @ServiceRegistry(IProvider::class) 注册，
+ * 底层框架无需感知具体业务接口类型。
+ * 调用方通过 ServiceEntry.isType() 按具体子接口类型匹配取用。
+ */
+interface IProvider {
+    val pKey: String get() = ""
 }

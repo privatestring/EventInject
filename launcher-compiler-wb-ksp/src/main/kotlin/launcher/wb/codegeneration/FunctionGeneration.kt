@@ -7,7 +7,6 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ANY
-import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -21,6 +20,7 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.buildCodeBlock
 import launcher.Function
+import launcher.MarketViewRoute
 
 /**
  * 佛祖保佑         永无BUG
@@ -82,7 +82,7 @@ class FunctionGeneration(
         }
 
         // 扫描 @MarketViewRoute 类（也参与收集，与原 KAPT 行为一致）
-        resolver.getSymbolsWithAnnotation("launcher.MarketViewRoute").forEach { symbol ->
+        resolver.getSymbolsWithAnnotation(MarketViewRoute::class.qualifiedName!!).forEach { symbol ->
             if (!symbol.validate()) {
                 unprocessed += symbol
                 return@forEach
@@ -99,7 +99,7 @@ class FunctionGeneration(
             functionClasses.add(classDecl)
 
             // 收集 group 参数
-            val groupArg = functionAnno.arguments.firstOrNull { it.name?.asString() == "group" }
+            val groupArg = functionAnno.arguments.firstOrNull { it.name?.asString() == Function::group.name }
             @Suppress("UNCHECKED_CAST")
             val groups = groupArg?.value as? List<String> ?: emptyList()
             allGroups.addAll(groups)
@@ -132,9 +132,9 @@ class FunctionGeneration(
             lines += "Groups          : ${distinctGroups.size} (${distinctGroups.joinToString(", ")})"
             distinctGroups.forEach { group ->
                 val count = functionClasses.count { classDecl ->
-                    val anno = classDecl.annotations.firstOrNull { it.shortName.asString() == "Function" }
+                    val anno = classDecl.findAnnotation(Function::class.qualifiedName!!)
                     @Suppress("UNCHECKED_CAST")
-                    val groups = anno?.arguments?.firstOrNull { it.name?.asString() == "group" }?.value as? List<String> ?: emptyList()
+                    val groups = anno?.arguments?.firstOrNull { it.name?.asString() == Function::group.name }?.value as? List<String> ?: emptyList()
                     groups.contains(group)
                 }
                 lines += "  $group: $count functions"
@@ -184,15 +184,13 @@ class FunctionGeneration(
 
         functionClasses.forEach { classDecl ->
             val simpleName = classDecl.simpleName.asString()
-            val functionAnno = classDecl.annotations.first {
-                it.shortName.asString() == "Function"
-            }
+            val functionAnno = classDecl.getAnnotation(Function::class.qualifiedName!!)
 
-            val functionIdArg = functionAnno.arguments.firstOrNull { it.name?.asString() == "functionId" }
+            val functionIdArg = functionAnno.arguments.firstOrNull { it.name?.asString() == Function::functionId.name }
             val functionId = (functionIdArg?.value as? String)?.ifEmpty { null }
                 ?: "${simpleName}_function"
 
-            val descArg = functionAnno.arguments.firstOrNull { it.name?.asString() == "desc" }
+            val descArg = functionAnno.arguments.firstOrNull { it.name?.asString() == Function::desc.name }
             val desc = descArg?.value as? String ?: ""
 
             // 重复 ID 检测
@@ -325,11 +323,10 @@ class FunctionGeneration(
             .addCode(buildCodeBlock {
                 addStatement("val result = mutableListOf<%T>()", classType)
                 functionClasses.forEach { classDecl ->
-                    val functionAnno = classDecl.annotations.firstOrNull {
-                        it.shortName.asString() == "Function"
-                    } ?: return@forEach
+                    val functionAnno = classDecl.findAnnotation(Function::class.qualifiedName!!)
+                        ?: return@forEach
 
-                    val groupArg = functionAnno.arguments.firstOrNull { it.name?.asString() == "group" }
+                    val groupArg = functionAnno.arguments.firstOrNull { it.name?.asString() == Function::group.name }
                     @Suppress("UNCHECKED_CAST")
                     val groups = groupArg?.value as? List<String> ?: emptyList()
 
@@ -345,7 +342,5 @@ class FunctionGeneration(
     }
 
     companion object {
-        private val JVM_STATIC = AnnotationSpec.builder(JvmStatic::class).build()
-        private val JVM_FIELD = AnnotationSpec.builder(JvmField::class).build()
     }
 }

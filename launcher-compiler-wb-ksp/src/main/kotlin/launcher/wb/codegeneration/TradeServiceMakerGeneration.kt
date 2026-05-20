@@ -137,12 +137,11 @@ class TradeServiceMakerGeneration(
      * 从 @TradeServiceMaker 注解中提取所有参数
      */
     private fun extractAnnotationData(classDecl: KSClassDeclaration): TradeServiceMakerData? {
-        val annotation = classDecl.annotations.firstOrNull {
-            it.shortName.asString() == "TradeServiceMaker"
-        } ?: return null
+        val annotation = classDecl.findAnnotation(TradeServiceMaker::class.qualifiedName!!)
+            ?: return null
 
         // baseInterface（KClass 在 KSP 中返回 KSType）
-        val baseInterfaceArg = annotation.arguments.firstOrNull { it.name?.asString() == "baseInterface" }
+        val baseInterfaceArg = annotation.arguments.firstOrNull { it.name?.asString() == TradeServiceMaker::baseInterface.name }
         val baseInterfaceType = baseInterfaceArg?.value as? KSType
         if (baseInterfaceType == null) {
             logger.error("TradeServiceAggregator: baseInterface is required", classDecl)
@@ -152,7 +151,7 @@ class TradeServiceMakerGeneration(
         // scanPackages（Array<String>）
         @Suppress("UNCHECKED_CAST")
         val scanPackages = (annotation.arguments.firstOrNull {
-            it.name?.asString() == "scanPackages"
+            it.name?.asString() == TradeServiceMaker::scanPackages.name
         }?.value as? List<String>) ?: emptyList()
 
         if (scanPackages.isEmpty()) {
@@ -162,18 +161,18 @@ class TradeServiceMakerGeneration(
         // additionalInterfaces（Array<KClass<*>> 在 KSP 中返回 List<KSType>）
         @Suppress("UNCHECKED_CAST")
         val additionalInterfaces = (annotation.arguments.firstOrNull {
-            it.name?.asString() == "additionalInterfaces"
+            it.name?.asString() == TradeServiceMaker::additionalInterfaces.name
         }?.value as? List<KSType>) ?: emptyList()
 
         // packageName
         val packageName = (annotation.arguments.firstOrNull {
-            it.name?.asString() == "packageName"
+            it.name?.asString() == TradeServiceMaker::packageName.name
         }?.value as? String)?.ifEmpty { null }
             ?: classDecl.packageName.asString()
 
         // className
         val className = (annotation.arguments.firstOrNull {
-            it.name?.asString() == "className"
+            it.name?.asString() == TradeServiceMaker::className.name
         }?.value as? String)?.ifEmpty { null }
             ?: "${classDecl.simpleName.asString()}Generated"
 

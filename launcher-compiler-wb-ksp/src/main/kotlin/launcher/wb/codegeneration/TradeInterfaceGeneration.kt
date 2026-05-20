@@ -16,6 +16,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.WildcardTypeName
 import com.squareup.kotlinpoet.buildCodeBlock
+import launcher.TradeInterface
 
 /**
  * 佛祖保佑         永无BUG
@@ -65,7 +66,7 @@ class TradeInterfaceGeneration(
 
         val unprocessed = mutableListOf<KSAnnotated>()
 
-        resolver.getSymbolsWithAnnotation("launcher.TradeInterface").forEach { symbol ->
+        resolver.getSymbolsWithAnnotation(TradeInterface::class.qualifiedName!!).forEach { symbol ->
             if (!symbol.validate()) {
                 unprocessed += symbol
                 return@forEach
@@ -109,12 +110,11 @@ class TradeInterfaceGeneration(
      * KSP 中注解的 KClass 参数值以 KSType 形式返回，可直接获取。
      */
     private fun processAnnotatedClass(classDecl: KSClassDeclaration) {
-        val annotation = classDecl.annotations.firstOrNull {
-            it.shortName.asString() == "TradeInterface"
-        } ?: return
+        val annotation = classDecl.findAnnotation(TradeInterface::class.qualifiedName!!)
+            ?: return
 
         // 获取 value 参数（KClass<*> 在 KSP 中返回 KSType）
-        val valueArg = annotation.arguments.firstOrNull { it.name?.asString() == "value" }
+        val valueArg = annotation.arguments.firstOrNull { it.name?.asString() == TradeInterface::value.name }
         val interfaceType = valueArg?.value as? KSType ?: run {
             logger.error("TradeInterface: cannot resolve 'value' parameter", classDecl)
             return
@@ -126,7 +126,7 @@ class TradeInterfaceGeneration(
         }
 
         // 获取 isInner 参数
-        val isInnerArg = annotation.arguments.firstOrNull { it.name?.asString() == "isInner" }
+        val isInnerArg = annotation.arguments.firstOrNull { it.name?.asString() == TradeInterface::isInner.name }
         val isInner = isInnerArg?.value as? Boolean ?: false
 
         if (isInner) {

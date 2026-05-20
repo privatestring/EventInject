@@ -123,6 +123,6 @@ abstract class BaseGeneration(
             appendLine("  ${"─".repeat(50)}")
             appendLine("  $summary")
         }
-        logger.warn(report)
+        logger.info(report)
     }
 }

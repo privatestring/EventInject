@@ -14,6 +14,15 @@ interface IViewAggregator {
 
     @ServiceGroup(IFragmentProvider::class)
     fun provideFragmentProviders(): List<IFragmentProvider> = emptyList()
+
+    /**
+     * 通用 Provider 兜底组（lazy 模式）。
+     *
+     * 业务层自定义的 Provider 接口（底层无需感知）统一注册到此组，
+     * 调用方通过 ServiceEntry.isType() 按具体子接口类型匹配取用。
+     */
+    @ServiceGroup(IProvider::class)
+    fun provideGenericEntries(): List<ServiceEntry<IProvider>> = emptyList()
 }
 
 /**

@@ -131,11 +131,3 @@ class AutoUpdateGeneration(
         return null to null
     }
 }
-
-/**
- * KSAnnotation 参数读取辅助扩展。
- */
-@Suppress("UNCHECKED_CAST")
-internal inline fun <reified T> com.google.devtools.ksp.symbol.KSAnnotation.arg(name: String): T? {
-    return arguments.firstOrNull { it.name?.asString() == name }?.value as? T
-}

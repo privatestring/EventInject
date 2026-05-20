@@ -30,6 +30,7 @@ object ServiceAggregatorTest {
 
         verifyViewProviders(viewAggregators)
         verifyFragmentProviders(viewAggregators)
+        verifyGenericProviders(viewAggregators)
         verifyServiceEntries(serviceAggregators, context)
         verifyAbTestProviders(serviceAggregators)
         verifyObjectSingleton(viewAggregators, serviceAggregators, context)
@@ -60,6 +61,25 @@ object ServiceAggregatorTest {
         val providers = aggregators.flatMap { it.provideFragmentProviders() }
         Log.e(TAG, "--- IFragmentProvider (${providers.size}, eager) ---")
         providers.forEach { Log.e(TAG, "  key=${it.key}, class=${it::class.java.simpleName}") }
+    }
+
+    /** 验证 IProvider lazy 模式：业务层自定义接口兜底组 */
+    private fun verifyGenericProviders(aggregators: List<IViewAggregator>) {
+        val entries = aggregators.flatMap { it.provideGenericEntries() }
+        Log.e(TAG, "--- IProvider (${entries.size}, lazy/ServiceEntry) ---")
+        entries.forEach { Log.e(TAG, "  implClass=${it.implClass.simpleName}") }
+
+        // 按业务子接口类型查找
+        val tickerCard = findProviderByType<ITickerCardProvider>(entries)
+        val marketWidget = findProviderByType<IMarketWidgetProvider>(entries)
+        Log.e(TAG, "  ITickerCardProvider found: ${tickerCard != null}, cardType=${tickerCard?.getCardType()}")
+        Log.e(TAG, "  IMarketWidgetProvider found: ${marketWidget != null}, widgetId=${marketWidget?.getWidgetId()}")
+
+        // 懒加载验证
+        val entry = entries.firstOrNull { it.isType(ITickerCardProvider::class.java) }
+        if (entry != null) {
+            Log.e(TAG, "  Lazy singleton: ${entry.instance === entry.instance}")
+        }
     }
 
     /** 验证 IService lazy 模式：ServiceEntry 按需实例化 */
@@ -112,6 +132,11 @@ object ServiceAggregatorTest {
 
     /** 按子接口类型从 ServiceEntry 列表中查找并实例化 */
     private inline fun <reified T : IService> findByType(entries: List<ServiceEntry<IService>>): T? {
+        return entries.firstOrNull { it.isType(T::class.java) }?.instance as? T
+    }
+
+    /** 按子接口类型从 IProvider ServiceEntry 列表中查找并实例化 */
+    private inline fun <reified T : IProvider> findProviderByType(entries: List<ServiceEntry<IProvider>>): T? {
         return entries.firstOrNull { it.isType(T::class.java) }?.instance as? T
     }
 

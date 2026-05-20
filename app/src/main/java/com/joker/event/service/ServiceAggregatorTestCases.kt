@@ -13,6 +13,7 @@ import wb.service.ServiceRegistry
  * - IFragmentProvider：eager 模式，按 key 查找
  * - IService：lazy 模式（ServiceEntry），按子接口类型按需实例化
  * - AbTestProvider：eager 模式，收集所有 keys
+ * - IProvider：lazy 模式（ServiceEntry），业务层自定义接口兜底组，按子接口类型匹配
  * - object 单例：eager 直接引用，lazy 包装为 ServiceEntry
  * - priority 排序：高优先级在前，同优先级按类名排序
  *
@@ -33,6 +34,10 @@ import wb.service.ServiceRegistry
  * - ServiceEntry(AppInfoService::class.java) { AppInfoService(context) }
  * - ServiceEntry(BondService::class.java) { BondService(context) }
  * - ServiceEntry(RankService::class.java) { RankService(context) }
+ *
+ * IProvider 预期生成（lazy 模式）：
+ * - ServiceEntry(TickerCardProviderImpl::class.java) { TickerCardProviderImpl() }
+ * - ServiceEntry(MarketWidgetProviderImpl::class.java) { MarketWidgetProviderImpl() }
  */
 
 // ============================================================
@@ -90,6 +95,31 @@ class RankService(context: Context) : IRankService
 
 @ServiceRegistry(IService::class)
 class AppInfoService(context: Context) : IAppInfoService
+
+// ============================================================
+// IProvider 实现（通用兜底组，lazy 模式，业务层自定义接口）
+// ============================================================
+
+/** 业务层自定义接口，底层无需感知 */
+interface ITickerCardProvider : IProvider {
+    fun getCardType(): String
+}
+
+interface IMarketWidgetProvider : IProvider {
+    fun getWidgetId(): String
+}
+
+@ServiceRegistry(IProvider::class)
+@ServiceRegistry(IFragmentProvider::class)
+object TickerCardProviderImpl : ITickerCardProvider, IFragmentProvider {
+    override fun getCardType(): String = "ticker_detail_card"
+    override val key: String = ""
+}
+
+@ServiceRegistry(IProvider::class)
+class MarketWidgetProviderImpl : IMarketWidgetProvider {
+    override fun getWidgetId(): String = "market_overview_widget"
+}
 
 // ============================================================
 // AbTestProvider 实现（2 个，eager）

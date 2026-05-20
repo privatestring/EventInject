@@ -5,6 +5,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
+import launcher.wb.codegeneration.ABTestKeysGeneration
 import launcher.wb.codegeneration.AutoConvertGeneration
 import launcher.wb.codegeneration.AutoUpdateGeneration
 import launcher.wb.codegeneration.BaseGeneration
@@ -50,6 +51,10 @@ class WbKspProcessor(
      * 新增功能时只需在此处添加对应的 Generation 实例。
      */
     private val generations: List<BaseGeneration> by lazy {
+        val serviceAggregator = ServiceAggregatorGeneration(codeGenerator, logger, options)
+        val abTestKeys = ABTestKeysGeneration(codeGenerator, logger).apply {
+            this.serviceAggregator = serviceAggregator
+        }
         listOf(
             FunctionGeneration(codeGenerator, logger),
             MarketViewRouteGeneration(codeGenerator, logger),
@@ -58,7 +63,8 @@ class WbKspProcessor(
             MapperGeneration(codeGenerator, logger),
             AutoUpdateGeneration(codeGenerator, logger),
             AutoConvertGeneration(codeGenerator, logger),
-            ServiceAggregatorGeneration(codeGenerator, logger, options),
+            abTestKeys,          // ABTestKeysGeneration 必须在 ServiceAggregatorGeneration 之前
+            serviceAggregator,   // ServiceAggregatorGeneration 最后，接收所有外部注册
         )
     }
 

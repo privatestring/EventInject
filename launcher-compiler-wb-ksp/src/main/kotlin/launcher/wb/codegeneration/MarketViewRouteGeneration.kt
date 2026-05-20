@@ -258,10 +258,8 @@ class MarketViewRouteGeneration(
      * 如果 key 为空，使用类的全限定名。
      */
     private fun getViewKey(classDecl: KSClassDeclaration): String {
-        val anno = classDecl.annotations.first {
-            it.shortName.asString() == "MarketViewRoute"
-        }
-        val keyArg = anno.arguments.firstOrNull { it.name?.asString() == "key" }
+        val anno = classDecl.getAnnotation(MarketViewRoute::class.qualifiedName!!)
+        val keyArg = anno.arguments.firstOrNull { it.name?.asString() == MarketViewRoute::key.name }
         val key = keyArg?.value as? String ?: ""
         return key.ifEmpty { classDecl.qualifiedName?.asString() ?: classDecl.simpleName.asString() }
     }
@@ -270,17 +268,13 @@ class MarketViewRouteGeneration(
      * 获取 @MarketViewRoute 的 desc 值
      */
     private fun getViewDesc(classDecl: KSClassDeclaration): String {
-        val anno = classDecl.annotations.first {
-            it.shortName.asString() == "MarketViewRoute"
-        }
-        val descArg = anno.arguments.firstOrNull { it.name?.asString() == "desc" }
+        val anno = classDecl.getAnnotation(MarketViewRoute::class.qualifiedName!!)
+        val descArg = anno.arguments.firstOrNull { it.name?.asString() == MarketViewRoute::desc.name }
         return descArg?.value as? String ?: ""
     }
 
     companion object {
         private const val PACKAGE_NAME = "com.webull.market.common.base"
         private const val CLASS_NAME = "MarketViewRouteFactory"
-        private val JVM_STATIC = AnnotationSpec.builder(JvmStatic::class).build()
-        private val JVM_FIELD = AnnotationSpec.builder(JvmField::class).build()
     }
 }
