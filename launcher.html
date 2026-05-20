@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launcher — 编译时代码生成框架</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.7;
+  margin: 0;
+  padding: 0;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+  padding: 16px 0;
+  transition: transform 0.25s ease;
+  z-index: 100;
+}
+.sidebar.collapsed {
+  transform: translateX(-280px);
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+}
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+}
+.sidebar-toggle {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 200;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #555;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: left 0.25s ease;
+}
+.sidebar-toggle.shifted {
+  left: 292px;
+}
+.sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar nav > ul > li {
+  margin: 0;
+}
+.sidebar nav a {
+  display: block;
+  padding: 5px 16px;
+  color: #444;
+  text-decoration: none;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sidebar nav a:hover {
+  background: #f5f5f5;
+  border-left-color: #0366d6;
+  color: #0366d6;
+}
+.sidebar nav ul ul {
+  display: block;
+}
+.sidebar nav ul li.closed > ul {
+  display: none;
+}
+.sidebar nav > ul > li > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar nav .toc-toggle {
+  font-size: 10px;
+  color: #999;
+  transition: transform 0.2s;
+  margin-left: auto;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.sidebar nav .toc-toggle:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+.sidebar nav li.closed > a .toc-toggle {
+  transform: rotate(0deg);
+}
+.sidebar nav li:not(.closed) > a .toc-toggle {
+  transform: rotate(90deg);
+}
+.sidebar nav ul ul a {
+  padding-left: 28px;
+  font-size: 12.5px;
+  color: #666;
+}
+.sidebar nav ul ul ul a {
+  padding-left: 40px;
+  font-size: 12px;
+  color: #888;
+}
+
+/* Main content */
+.content {
+  margin-left: 280px;
+  padding: 40px 48px;
+  transition: margin-left 0.25s ease;
+}
+.content.expanded {
+  margin-left: 0;
+}
+
+h1 { border-bottom: 2px solid #333; padding-bottom: 8px; margin-top: 0; }
+h2 { border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 48px; }
+h3 { margin-top: 32px; color: #333; }
+h4 { margin-top: 24px; color: #555; }
+code {
+  font-family: "SF Mono", "Fira Code", "JetBrains Mono", Menlo, monospace;
+  font-size: 0.88em;
+  background: #f0f0f0;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+pre {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 16px 20px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  font-size: 0.9em;
+}
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+tr:nth-child(even) { background: #fafafa; }
+blockquote {
+  border-left: 4px solid #ddd;
+  margin: 16px 0;
+  padding: 8px 16px;
+  color: #666;
+  background: #f9f9f9;
+}
+hr { border: none; border-top: 1px solid #eee; margin: 40px 0; }
+a { color: #0366d6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { color: #c0392b; }
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-280px); }
+  .sidebar.collapsed { transform: translateX(-280px); }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .content { margin-left: 0; }
+  .sidebar-toggle { left: 12px; }
+  .sidebar-toggle.shifted { left: 12px; }
+}
+</style>
+</head>
+<body>
+
+<button class="sidebar-toggle shifted" onclick="toggleSidebar()" title="切换目录">☰</button>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h3>目录</h3>
+  </div>
+  <nav>
+    <div class="toc">
+<ul>
+<li><a href="#launcher">Launcher — 编译时代码生成框架</a><ul>
+<li><a href="#_1">概述</a></li>
+<li><a href="#_2">模块结构</a></li>
+<li><a href="#_3">模块职责</a><ul>
+<li><a href="#launcher-joke">launcher-joke（注解定义）</a></li>
+<li><a href="#launcher-compiler-kspksp-a">launcher-compiler-ksp（KSP 处理器 A）</a></li>
+<li><a href="#launcher-compiler-wb-kspksp-b">launcher-compiler-wb-ksp（KSP 处理器 B）</a></li>
+<li><a href="#launcher-compiler">launcher-compiler（已废弃）</a></li>
+</ul>
+</li>
+<li><a href="#_4">架构设计</a><ul>
+<li><a href="#ksp">为什么拆分为两个 KSP 处理器？</a></li>
+<li><a href="#_5">处理流程</a></li>
+<li><a href="#wb-ksp-generation">wb-ksp 的 Generation 架构</a></li>
+</ul>
+</li>
+<li><a href="#_6">业务模块接入</a><ul>
+<li><a href="#gradle">Gradle 配置</a></li>
+<li><a href="#_7">生成代码位置</a></li>
+</ul>
+</li>
+<li><a href="#_8">功能速查</a><ul>
+<li><a href="#boom">功能一：启动器（@Boom）</a></li>
+<li><a href="#router">功能二：路由（@Router）</a></li>
+<li><a href="#function">功能三：功能地图（@Function）</a></li>
+<li><a href="#marketviewroute">功能四：视图路由（@MarketViewRoute）</a></li>
+<li><a href="#tradeinterface">功能五：交易服务工厂（@TradeInterface）</a></li>
+<li><a href="#tradeservicemaker">功能六：聚合接口（@TradeServiceMaker）</a></li>
+<li><a href="#autoupdate">功能七：自动赋值（@AutoUpdate）</a></li>
+<li><a href="#autoconvert">功能八：数据转换（@AutoConvert）</a></li>
+<li><a href="#serviceaggregator-serviceregistry">功能九：ServiceAggregator 服务聚合（@ServiceRegistry）</a></li>
+<li><a href="#abtest-key-abtestkeys">功能十：ABTest Key 自动收集（@ABTestKeys）</a></li>
+</ul>
+</li>
+<li><a href="#kapt">与旧 KAPT 实现的差异</a></li>
+<li><a href="#_29">目录说明</a><ul>
+<li><a href="#migration-ksp">migration-ksp/（迁移知识库）</a></li>
+</ul>
+</li>
+<li><a href="#_30">开发指南</a><ul>
+<li><a href="#_31">新增注解处理功能</a></li>
+<li><a href="#_32">调试</a></li>
+<li><a href="#_33">注意事项</a></li>
+</ul>
+</li>
+<li><a href="#_34">特别注意：硬编码类名</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+  </nav>
+</aside>
+
+<main class="content" id="content">
+<h1 id="launcher">Launcher — 编译时代码生成框架</h1>
+<h2 id="_1">概述</h2>
+<p>Launcher 是项目的编译时注解处理框架，负责自动生成 Activity/Fragment 启动器、路由、功能地图、交易服务工厂等代码。当前已完成从 KAPT 到 KSP 的迁移。</p>
+<h2 id="_2">模块结构</h2>
+<pre><code>core-layer/launcher/
+├── launcher-joke/              # 注解定义包（纯 Kotlin/Java，无处理逻辑）
+├── launcher-compiler/          # [已废弃] 旧 KAPT 注解处理器
+├── launcher-compiler-ksp/      # [当前] KSP 处理器 — Launcher/Router
+├── launcher-compiler-wb-ksp/   # [当前] KSP 处理器 — Function/MarketView/Trade
+└── migration-ksp/              # 迁移文档与知识库
+</code></pre>
+<h2 id="_3">模块职责</h2>
+<h3 id="launcher-joke">launcher-joke（注解定义）</h3>
+<p>纯注解包，不包含任何处理逻辑。业务模块通过 <code>implementation</code> 依赖此模块使用注解。</p>
+<table>
+<thead>
+<tr>
+<th>包</th>
+<th>注解</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>launcher</code></td>
+<td><code>@Boom</code>, <code>@IncludeParentBoom</code>, <code>@MakeResult</code>, <code>@ParentCls</code>, <code>@Router</code>, <code>@RouterCheck</code></td>
+<td>Activity/Fragment 启动器 + 路由</td>
+</tr>
+<tr>
+<td><code>wb</code></td>
+<td><code>@Function</code>, <code>@MarketViewRoute</code>, <code>@TradeInterface</code>, <code>@TradeServiceMaker</code></td>
+<td>功能地图 + 视图路由 + 交易服务</td>
+</tr>
+<tr>
+<td><code>wb.service</code></td>
+<td><code>@ServiceRegistry</code>, <code>@ServiceGroup</code>, <code>ServiceEntry&lt;T&gt;</code>, <code>IProvider</code></td>
+<td>服务聚合（替代 @AutoService）</td>
+</tr>
+<tr>
+<td><code>wb.bean</code></td>
+<td><code>@AutoUpdate</code>, <code>@AutoUpdateIgnore</code>, <code>@AutoUpdateAlways</code>, <code>@AutoUpdateCheck</code></td>
+<td>Bean 自动赋值</td>
+</tr>
+<tr>
+<td><code>wb.bean</code></td>
+<td><code>@AutoConvert</code>, <code>AutoConvertLifecycle&lt;S, T&gt;</code></td>
+<td>数据转换</td>
+</tr>
+<tr>
+<td><code>wb.bean</code></td>
+<td><code>@ABTestKeys</code>, <code>@ABTestKeyExclude</code></td>
+<td>ABTest Key 自动收集</td>
+</tr>
+<tr>
+<td><code>mapper</code></td>
+<td><code>@Mapper</code>, <code>@Mapping</code>, <code>@MappingTarget</code>, <code>@MappingConfig</code> 等</td>
+<td>对象映射</td>
+</tr>
+</tbody>
+</table>
+<h3 id="launcher-compiler-kspksp-a">launcher-compiler-ksp（KSP 处理器 A）</h3>
+<p>处理 <code>launcher</code> 包下的注解，生成 <strong>Java</strong> 代码。</p>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>输入注解</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>启动器</td>
+<td><code>@Boom</code> + <code>@IncludeParentBoom</code> + <code>@MakeResult</code> + <code>@ParentCls</code></td>
+<td><code>XxxLauncher.java</code></td>
+</tr>
+<tr>
+<td>路由</td>
+<td><code>@Router</code> + <code>@RouterCheck</code></td>
+<td><code>Xxx_XXXxxx.java</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>技术栈：</strong> KSP API + JavaPoet</p>
+<h3 id="launcher-compiler-wb-kspksp-b">launcher-compiler-wb-ksp（KSP 处理器 B）</h3>
+<p>处理 <code>wb</code> 包下的注解，生成 <strong>Kotlin</strong> 代码。</p>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>输入注解</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>功能地图</td>
+<td><code>@Function</code></td>
+<td><code>FunctionFactory.kt</code></td>
+</tr>
+<tr>
+<td>视图路由</td>
+<td><code>@MarketViewRoute</code></td>
+<td><code>MarketViewRouteFactory.kt</code></td>
+</tr>
+<tr>
+<td>交易服务工厂</td>
+<td><code>@TradeInterface</code></td>
+<td><code>TradeInterfaceFactory{Module}.kt</code></td>
+</tr>
+<tr>
+<td>聚合接口</td>
+<td><code>@TradeServiceMaker</code></td>
+<td><code>ITradeManagerService.kt</code></td>
+</tr>
+<tr>
+<td>自动赋值</td>
+<td><code>@AutoUpdate</code> + <code>@AutoUpdateIgnore</code> + <code>@AutoUpdateAlways</code> + <code>@AutoUpdateCheck</code></td>
+<td><code>{ClassName}AutoUpdate.kt</code></td>
+</tr>
+<tr>
+<td>数据转换</td>
+<td><code>@AutoConvert</code> + <code>AutoConvertLifecycle&lt;S, T&gt;</code></td>
+<td><code>{Source}ConvertTo{Target}.kt</code></td>
+</tr>
+<tr>
+<td>ABTest Key 收集</td>
+<td><code>@ABTestKeys</code> + <code>@ABTestKeyExclude</code></td>
+<td><code>{ClassName}_AbKeys.kt</code> + <code>{ClassName}_AbTestProvider.kt</code></td>
+</tr>
+<tr>
+<td>服务聚合</td>
+<td><code>@ServiceRegistry</code></td>
+<td><code>{Module}_ServiceAggregator.kt</code> + SPI 文件</td>
+</tr>
+</tbody>
+</table>
+<p><strong>技术栈：</strong> KSP API + KotlinPoet + JavaPoet</p>
+<h3 id="launcher-compiler">launcher-compiler（已废弃）</h3>
+<p>旧 KAPT 实现，保留用于对比验证。迁移完成后将移除。</p>
+<hr />
+<h2 id="_4">架构设计</h2>
+<h3 id="ksp">为什么拆分为两个 KSP 处理器？</h3>
+<ol>
+<li><strong>职责分离</strong>：Launcher/Router 是基础能力（所有模块都用），Function/Trade 是业务能力（特定模块使用）</li>
+<li><strong>输出语言不同</strong>：<code>launcher-compiler-ksp</code> 生成 Java（兼容旧代码调用），<code>launcher-compiler-wb-ksp</code> 生成 Kotlin（新架构）</li>
+<li><strong>依赖隔离</strong>：<code>wb-ksp</code> 额外依赖 KotlinPoet，不影响基础处理器的轻量性</li>
+</ol>
+<h3 id="_5">处理流程</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│  KSP 框架                                                     │
+│                                                               │
+│  ┌─────────────────────┐    ┌──────────────────────────────┐ │
+│  │ launcher-compiler-ksp│    │ launcher-compiler-wb-ksp      │ │
+│  │                     │    │                              │ │
+│  │ LauncherKspProvider │    │ WbKspProvider                │ │
+│  │       ↓             │    │       ↓                      │ │
+│  │ LauncherKspProcessor│    │ WbKspProcessor               │ │
+│  │       ↓             │    │       ↓                      │ │
+│  │ • 扫描 @Boom        │    │ • FunctionGeneration         │ │
+│  │ • 扫描 @Router      │    │ • MarketViewRouteGeneration  │ │
+│  │ • ClassBindingFactory│    │ • TradeInterfaceGeneration   │ │
+│  │ • 生成 Launcher     │    │ • TradeServiceMakerGeneration│ │
+│  │ • 生成 Router       │    │ • AutoUpdateGeneration       │ │
+│  └─────────────────────┘    │ • AutoConvertGeneration      │ │
+│                              │ • ABTestKeysGeneration       │ │
+│                              │ • ServiceAggregatorGeneration│ │
+│                              └──────────────────────────────┘ │
+│                                                               │
+│  输出: build/generated/ksp/stocksDebug/{java|kotlin}/         │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="wb-ksp-generation">wb-ksp 的 Generation 架构</h3>
+<p><code>WbKspProcessor</code> 采用 <strong>collect → generate</strong> 两阶段模式：</p>
+<pre><code class="language-kotlin">interface BaseGeneration {
+    fun collect(resolver: Resolver): List&lt;KSAnnotated&gt;  // 阶段一：收集注解符号
+    fun hasDataToGenerate(): Boolean                    // 是否有数据需要生成
+    fun generate()                                      // 阶段二：生成代码
+}
+</code></pre>
+<p>新增功能只需：
+1. 实现 <code>BaseGeneration</code> 接口
+2. 在 <code>WbKspProcessor.generations</code> 列表中注册</p>
+<hr />
+<h2 id="_6">业务模块接入</h2>
+<h3 id="gradle">Gradle 配置</h3>
+<pre><code class="language-groovy">// build.gradle
+apply plugin: 'com.google.devtools.ksp'
+
+dependencies {
+    implementation project(':launcher-joke')
+    ksp project(':launcher-compiler-ksp')
+    ksp project(':launcher-compiler-wb-ksp')  // 需要 Function/Trade 功能时添加
+}
+
+// 传递编译参数（TradeInterface 需要）
+ksp {
+    arg(&quot;module_name&quot;, &quot;TradeCore&quot;)
+}
+</code></pre>
+<h3 id="_7">生成代码位置</h3>
+<pre><code>{module}/build/generated/ksp/stocksDebug/java/    # launcher-compiler-ksp 输出
+{module}/build/generated/ksp/stocksDebug/kotlin/  # launcher-compiler-wb-ksp 输出
+</code></pre>
+<hr />
+<h2 id="_8">功能速查</h2>
+<h3 id="boom">功能一：启动器（@Boom）</h3>
+<pre><code class="language-kotlin">class OrderDetailFragment : AppBaseFragment&lt;...&gt;() {
+    @Boom(index = 0, desc = &quot;订单ID&quot;)
+    var orderId: String = &quot;&quot;
+
+    @Boom(index = 1, isOptional = true, desc = &quot;来源&quot;)
+    var fromPage: String? = null
+}
+
+// 使用
+OrderDetailFragmentLauncher.newInstance(&quot;ORDER_123&quot;).jump(context)
+OrderDetailFragmentLauncher.newInstance(&quot;ORDER_123&quot;, &quot;home&quot;).jump(context)
+</code></pre>
+<h4 id="includeparentboom">@IncludeParentBoom（继承父类参数）</h4>
+<p>标注在子类上，生成的 Launcher 会包含父类的 <code>@Boom</code> 属性。子类的 <code>@Boom</code> index 不能与父类重复。</p>
+<pre><code class="language-kotlin">open class BaseTickerFragment : AppBaseFragment&lt;...&gt;() {
+    @Boom(index = 0, desc = &quot;股票ID&quot;)
+    var tickerId: String = &quot;&quot;
+}
+
+@IncludeParentBoom
+class TickerDetailFragment : BaseTickerFragment() {
+    @Boom(index = 1, desc = &quot;Tab索引&quot;)  // index 不能与父类的 0 重复
+    var tabIndex: Int = 0
+}
+
+// 生成的 Launcher 包含 tickerId + tabIndex 两个参数
+TickerDetailFragmentLauncher.newInstance(&quot;AAPL&quot;, 2).jump(context)
+</code></pre>
+<h3 id="router">功能二：路由（@Router）</h3>
+<pre><code class="language-kotlin">@Router(routerPath = &quot;webull://trade/order_detail&quot;)
+class OrderDetailActivity : AppBaseActivity&lt;...&gt;() {
+    @Boom(index = 0, desc = &quot;订单ID&quot;)
+    var orderId: String = &quot;&quot;
+}
+
+// 跨模块跳转
+OrderDetailActivity_XXXxxx.jump(context, &quot;ORDER_123&quot;)
+</code></pre>
+<h3 id="function">功能三：功能地图（@Function）</h3>
+<pre><code class="language-kotlin">@Function(functionId = &quot;order_detail&quot;, desc = &quot;订单详情&quot;, group = [&quot;trade&quot;])
+class OrderDetailActivity : AppBaseActivity&lt;...&gt;() { ... }
+
+// 运行时查找
+FunctionFactory.createViewById(context, &quot;order_detail&quot;)
+</code></pre>
+<h3 id="marketviewroute">功能四：视图路由（@MarketViewRoute）</h3>
+<pre><code class="language-kotlin">@MarketViewRoute(key = &quot;kline&quot;, desc = &quot;K线图&quot;)
+class KLineView(context: Context) : View(context) { ... }
+
+// 动态创建
+MarketViewRouteFactory.createViewById(context, &quot;kline&quot;)
+</code></pre>
+<h3 id="tradeinterface">功能五：交易服务工厂（@TradeInterface）</h3>
+<pre><code class="language-kotlin">@TradeInterface(value = ITradeAccountInterface::class)
+class TradeAccountImpl : ITradeAccountInterface { ... }
+
+// 运行时获取实现
+val service = factory.createInstance(ITradeAccountInterface::class.java)
+</code></pre>
+<h3 id="tradeservicemaker">功能六：聚合接口（@TradeServiceMaker）</h3>
+<pre><code class="language-kotlin">@TradeServiceMaker(
+    baseInterface = ITradeInterface::class,
+    scanPackages = [&quot;com.webull.commonmodule.trade.service.trade&quot;],
+    additionalInterfaces = [IService::class],
+    className = &quot;ITradeManagerService&quot;
+)
+interface TradeManagerServiceMarker
+</code></pre>
+<p>自动生成继承所有顶层 Trade 接口的聚合接口。</p>
+<h3 id="autoupdate">功能七：自动赋值（@AutoUpdate）</h3>
+<p>为 Bean 类自动生成字段赋值扩展函数，用于行情推送等场景下将新数据合并到已有对象。</p>
+<h4 id="_9">核心注解</h4>
+<table>
+<thead>
+<tr>
+<th>注解</th>
+<th>作用域</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@AutoUpdate</code></td>
+<td>类</td>
+<td>标记需要生成 update 扩展函数的 Bean 类</td>
+</tr>
+<tr>
+<td><code>@AutoUpdateIgnore</code></td>
+<td>字段/属性</td>
+<td>跳过该字段，不生成赋值代码（生成注释提示）</td>
+</tr>
+<tr>
+<td><code>@AutoUpdateAlways</code></td>
+<td>字段/属性</td>
+<td>无条件赋值，不做任何检查</td>
+</tr>
+<tr>
+<td><code>@AutoUpdateCheck</code></td>
+<td>字段/属性</td>
+<td>自定义该字段的赋值条件表达式</td>
+</tr>
+</tbody>
+</table>
+<h4 id="autoupdate_1">@AutoUpdate 参数</h4>
+<pre><code class="language-kotlin">@AutoUpdate(
+    functionName = &quot;&quot;,           // 生成的函数名，为空时默认 &quot;update{ClassName}Fields&quot;
+    stringCheck = &quot;{field}.valueIsNotEmpty()&quot;,  // String 字段的默认检查表达式
+    stringCheckImport = &quot;wb.bean.valueIsNotEmpty&quot;  // stringCheck 中扩展函数的 import 路径
+)
+</code></pre>
+<h4 id="_10">默认赋值规则</h4>
+<table>
+<thead>
+<tr>
+<th>字段类型</th>
+<th>生成的条件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>String?</code></td>
+<td><code>if (from.xxx.valueIsNotEmpty())</code></td>
+<td>非 null 且非空且非 "--"</td>
+</tr>
+<tr>
+<td><code>Int</code></td>
+<td><code>if (from.xxx != 默认值)</code></td>
+<td>默认值从声明中提取，未声明时为 0</td>
+</tr>
+<tr>
+<td><code>Long</code></td>
+<td><code>if (from.xxx != 默认值L)</code></td>
+<td>默认值从声明中提取，未声明时为 0L</td>
+</tr>
+<tr>
+<td><code>Double</code></td>
+<td><code>if (from.xxx != 默认值)</code></td>
+<td>默认值从声明中提取，未声明时为 0.0</td>
+</tr>
+<tr>
+<td><code>Float</code></td>
+<td><code>if (from.xxx != 默认值f)</code></td>
+<td>默认值从声明中提取，未声明时为 0.0f</td>
+</tr>
+<tr>
+<td><code>Boolean</code></td>
+<td><code>if (from.xxx)</code> 或 <code>if (!from.xxx)</code></td>
+<td>默认 false 时检查 true，默认 true 时检查 false</td>
+</tr>
+<tr>
+<td>可空对象</td>
+<td><code>if (from.xxx != null)</code></td>
+<td>非 null</td>
+</tr>
+<tr>
+<td>非空对象</td>
+<td>直接赋值</td>
+<td>无条件</td>
+</tr>
+<tr>
+<td><code>IntArray</code></td>
+<td>跳过（SKIP）</td>
+<td>需要 <code>@AutoUpdateAlways</code> 或 <code>@AutoUpdateCheck</code> 强制生成</td>
+</tr>
+</tbody>
+</table>
+<p><strong>默认值提取机制：</strong> 处理器通过读取源码文本解析属性声明中 <code>= xxx</code> 部分的初始值。例如 <code>var tradeStamp: Long = -1L</code> 会生成 <code>if (from.tradeStamp != -1L)</code> 而非 <code>if (from.tradeStamp != 0L)</code>。</p>
+<h4 id="_11">基本用法</h4>
+<pre><code class="language-kotlin">@AutoUpdate
+open class TickerTupleV5 : TickerBase(), Serializable {
+    var close: String? = null
+    var change: String? = null
+    var tradeStamp: Long = 0
+    var retryCount: Int = -1       // 默认值 -1，生成 if (from.retryCount != -1)
+
+    @AutoUpdateIgnore  // 有特殊业务逻辑，手动处理
+    var status: String? = null
+}
+</code></pre>
+<p>生成代码：</p>
+<pre><code class="language-kotlin">// Generated: TickerTupleV5AutoUpdate.kt
+fun TickerTupleV5.updateTickerTupleV5Fields(from: TickerTupleV5, callParent: Boolean = true) {
+    if (callParent) {
+        updateTickerBaseFields(from)  // 自动调用父类的 update 函数
+    }
+
+    if (from.change.valueIsNotEmpty()) change = from.change
+    if (from.close.valueIsNotEmpty()) close = from.close
+    if (from.retryCount != -1) retryCount = from.retryCount
+    if (from.tradeStamp != 0L) tradeStamp = from.tradeStamp
+
+    // @AutoUpdateIgnore: status
+}
+</code></pre>
+<h4 id="_12">继承关系自动处理</h4>
+<p>当子类和父类都标注了 <code>@AutoUpdate</code> 时：
+- 子类生成的函数自动包含 <code>callParent</code> 参数（默认 <code>true</code>）
+- 子类只生成自身声明的字段赋值，父类字段由父类的 update 函数处理
+- 父类通过 <code>superTypes</code> 自动推断，无需手动指定</p>
+<pre><code class="language-kotlin">@AutoUpdate
+open class TickerBase { ... }  // 生成 updateTickerBaseFields(from)
+
+@AutoUpdate(functionName = &quot;updateRealtimeV2Fields&quot;)
+open class TickerRealtimeV2 : TickerTupleV5() { ... }
+// 生成 updateRealtimeV2Fields(from, callParent = true)
+// callParent=true 时自动调用 updateTickerTupleV5Fields(from)
+</code></pre>
+<h4 id="autoupdatecheck">@AutoUpdateCheck 自定义条件</h4>
+<pre><code class="language-kotlin">@AutoUpdateCheck(condition = &quot;{from}.listStatusInteger != null&quot;)
+private Integer listStatus;
+
+@AutoUpdateCheck(
+    condition = &quot;{field} != null &amp;&amp; {field} != 0&quot;
+)
+private Integer subType;
+</code></pre>
+<p>占位符说明：
+- <code>{field}</code> → 替换为 <code>from.属性名</code>（如 <code>from.volume</code>）
+- <code>{from}</code> → 替换为源对象 <code>from</code>（用于访问其他 getter/属性）</p>
+<p>生成结果：</p>
+<pre><code class="language-kotlin">if (from.listStatusInteger != null) listStatus = from.listStatus
+if (from.subType != null &amp;&amp; from.subType != 0) subType = from.subType
+</code></pre>
+<h4 id="autoupdatealways">@AutoUpdateAlways 无条件赋值</h4>
+<pre><code class="language-kotlin">@AutoUpdateAlways
+var microTrend: MicroTrend? = null  // 每次推送都覆盖，不检查 null
+</code></pre>
+<p>生成结果：<code>microTrend = from.microTrend</code></p>
+<blockquote>
+<p>也可用于 SKIP 类型（如 <code>IntArray</code>），强制生成赋值代码。</p>
+</blockquote>
+<h4 id="java">Java 类支持</h4>
+<p>对 Java 类，处理器通过 getter/setter 方法对推断 private 字段：
+- <code>getXxx()</code> + <code>setXxx(value)</code> → 识别为字段 <code>xxx</code>
+- <code>isXxx()</code> + <code>setXxx(value)</code> → 识别为字段 <code>isXxx</code>
+- 注解可标注在字段声明上，处理器会正确读取</p>
+<pre><code class="language-java">@AutoUpdate
+public class TickerBase implements Serializable {
+    @AutoUpdateIgnore
+    public String tickerId = &quot;&quot;;  // 跳过
+
+    @AutoUpdateCheck(condition = &quot;{from}.listStatusInteger != null&quot;)
+    private Integer listStatus;  // 自定义条件
+
+    private String belongTickerId;  // 通过 getter/setter 推断
+    public String getBelongTickerId() { return belongTickerId; }
+    public void setBelongTickerId(String v) { this.belongTickerId = v; }
+}
+</code></pre>
+<h4 id="_13">生成文件</h4>
+<ul>
+<li>文件名：<code>{ClassName}AutoUpdate.kt</code></li>
+<li>包名：与源类相同</li>
+<li>位置：<code>build/generated/ksp/{variant}/kotlin/{package}/</code></li>
+</ul>
+<h3 id="autoconvert">功能八：数据转换（@AutoConvert）</h3>
+<p>为两个 Bean 类之间自动生成类型安全的转换扩展函数，适用于 DTO → Entity、Response → VO 等场景。</p>
+<h4 id="_14">核心注解与接口</h4>
+<table>
+<thead>
+<tr>
+<th>注解/接口</th>
+<th>作用域</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@AutoConvert</code></td>
+<td>类</td>
+<td>标记转换器类，触发代码生成</td>
+</tr>
+<tr>
+<td><code>AutoConvertLifecycle&lt;S, T&gt;</code></td>
+<td>接口</td>
+<td>定义转换生命周期回调（onStart / onEnd）</td>
+</tr>
+</tbody>
+</table>
+<h4 id="autoconvert_1">@AutoConvert 参数</h4>
+<pre><code class="language-kotlin">@AutoConvert(
+    functionName = &quot;&quot;,           // 生成的函数名，为空时默认 &quot;convertTo{TargetClassName}&quot;
+    ignoreTargets = []           // 忽略的目标类属性名，不参与映射也不出现在未匹配注释中
+)
+</code></pre>
+<h4 id="autoconvertlifecycle">AutoConvertLifecycle 接口</h4>
+<pre><code class="language-kotlin">interface AutoConvertLifecycle&lt;S, T&gt; {
+    /** 转换开始前调用，target 已创建但尚未赋值 */
+    fun onStart(source: S, target: T) {}
+
+    /** 转换结束后调用，自动映射已完成，可补充手动映射 */
+    fun onEnd(source: S, target: T) {}
+}
+</code></pre>
+<h4 id="_15">匹配规则</h4>
+<table>
+<thead>
+<tr>
+<th>条件</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>同名 + 类型兼容</td>
+<td>自动赋值</td>
+</tr>
+<tr>
+<td>同名 + 类型不兼容</td>
+<td>注释提醒（需在 <code>onEnd</code> 中手动处理）</td>
+</tr>
+<tr>
+<td>目标类有但源类无</td>
+<td>注释提醒</td>
+</tr>
+<tr>
+<td>在 <code>ignoreTargets</code> 中</td>
+<td>跳过，不生成也不提醒</td>
+</tr>
+</tbody>
+</table>
+<p><strong>类型兼容判断：</strong>
+- 完全相同类型 → 兼容
+- Kotlin/Java 基本类型互通（如 <code>java.lang.String</code> ↔ <code>kotlin.String</code>）
+- 源类可空 → 目标类非空 → 不兼容（需手动处理）
+- 源类非空 → 目标类可空 → 兼容</p>
+<h4 id="_16">基本用法</h4>
+<pre><code class="language-kotlin">// 1. 定义转换器
+@AutoConvert
+class OrderDtoConverter : AutoConvertLifecycle&lt;OrderDto, OrderEntity&gt; {
+    override fun onEnd(source: OrderDto, target: OrderEntity) {
+        // 手动处理不匹配的属性
+        target.price = source.priceStr.toBigDecimal()
+    }
+}
+
+// 2. 使用生成的扩展函数
+val entity = orderDto.convertToOrderEntity()
+// 或传入自定义 converter 实例
+val entity = orderDto.convertToOrderEntity(MyCustomConverter())
+</code></pre>
+<h4 id="_17">生成代码示例</h4>
+<pre><code class="language-kotlin">// Generated: OrderDtoConvertToOrderEntity.kt
+fun OrderDto.convertToOrderEntity(converter: OrderDtoConverter = OrderDtoConverter()): OrderEntity {
+    val target = OrderEntity()
+    converter.onStart(this, target)
+
+    target.orderId = this.orderId
+    target.symbol = this.symbol
+    target.quantity = this.quantity
+
+    // 以下目标属性在源类中未找到匹配：
+    // - price: BigDecimal（源类类型不匹配：String）
+
+    converter.onEnd(this, target)
+    return target
+}
+</code></pre>
+<h4 id="_18">继承关系处理</h4>
+<p>当目标类有继承关系时，生成器会：
+- 分别匹配当前类和父类的可写属性
+- 父类属性赋值放入独立的 <code>convertParentFields()</code> 私有函数
+- 父类中 private 且无 setter 的字段标记为"只读"</p>
+<pre><code class="language-kotlin">// 生成代码包含父类处理
+fun SourceDto.convertToTargetEntity(converter: ...): TargetEntity {
+    val target = TargetEntity()
+    converter.onStart(this, target)
+
+    convertParentFields(this, target)  // 父类属性
+
+    target.ownField1 = this.ownField1  // 当前类属性
+    target.ownField2 = this.ownField2
+
+    converter.onEnd(this, target)
+    return target
+}
+
+private fun convertParentFields(source: SourceDto, target: TargetEntity) {
+    target.parentField1 = source.parentField1
+    target.parentField2 = source.parentField2
+}
+</code></pre>
+<h4 id="java_1">Java 类支持</h4>
+<ul>
+<li>源类：通过 <code>getXxx()</code> / <code>isXxx()</code> 推断可读属性</li>
+<li>目标类：通过 <code>setXxx(value)</code> 推断可写属性</li>
+<li>生成代码自动使用 getter/setter 方法调用</li>
+</ul>
+<pre><code class="language-kotlin">// Java 源类有 getpValue1() → 生成 this.getpValue1()
+// Java 目标类有 setpValue1(v) → 生成 target.setpValue1(value)
+</code></pre>
+<h4 id="ignoretargets">ignoreTargets 用法</h4>
+<pre><code class="language-kotlin">@AutoConvert(ignoreTargets = [&quot;serialVersionUID&quot;, &quot;internalFlag&quot;])
+class MyConverter : AutoConvertLifecycle&lt;Source, Target&gt; { ... }
+</code></pre>
+<p>被忽略的属性不会出现在生成代码中，也不会出现在"未匹配"注释中。</p>
+<h4 id="_19">生成文件</h4>
+<ul>
+<li>文件名：<code>{SourceClassName}ConvertTo{TargetClassName}.kt</code></li>
+<li>包名：与转换器类相同</li>
+<li>位置：<code>build/generated/ksp/{variant}/kotlin/{package}/</code></li>
+</ul>
+<h3 id="serviceaggregator-serviceregistry">功能九：ServiceAggregator 服务聚合（@ServiceRegistry）</h3>
+<p>替代 <code>@AutoService</code> + <code>ServiceLoader</code> 的编译时服务聚合方案。KSP 为每个模块生成一个聚合类，运行时通过 <code>ServiceAggregatorHolder</code> 统一查找，消除逐个反射实例化的性能开销。</p>
+<h4 id="_20">核心注解</h4>
+<table>
+<thead>
+<tr>
+<th>注解/类</th>
+<th>包</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@ServiceRegistry</code></td>
+<td><code>wb.service</code></td>
+<td>标记实现类注册到聚合器（替代 <code>@AutoService</code>）</td>
+</tr>
+<tr>
+<td><code>@ServiceGroup</code></td>
+<td><code>wb.service</code></td>
+<td>标记聚合接口方法对应的 SPI 接口组</td>
+</tr>
+<tr>
+<td><code>ServiceEntry&lt;T&gt;</code></td>
+<td><code>wb.service</code></td>
+<td>懒加载包装，按需实例化</td>
+</tr>
+</tbody>
+</table>
+<h4 id="serviceregistry">@ServiceRegistry</h4>
+<pre><code class="language-kotlin">import wb.service.ServiceRegistry
+
+// 迁移：@ServiceRegistry(IViewProvider::class) → @ServiceRegistry(IViewProvider::class)
+@ServiceRegistry(IViewProvider::class, priority = 100)
+class MarketBannerViewProvider : IViewProvider {
+    override val key = &quot;market_banner&quot;
+    override fun createView(context: Context?, vararg params: Any?): View? { ... }
+}
+
+@ServiceRegistry(IService::class)
+class BondService(context: Context) : IService, IBondService { ... }
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>value</code></td>
+<td><code>KClass&lt;*&gt;</code></td>
+<td>必填</td>
+<td>归入哪个 SPI 接口</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td><code>Int</code></td>
+<td><code>0</code></td>
+<td>优先级，数值越大越靠前</td>
+</tr>
+</tbody>
+</table>
+<h4 id="iserviceaggregator">聚合接口（IServiceAggregator）</h4>
+<p>统一接口，KSP 生成的聚合类实现此接口：</p>
+<pre><code class="language-kotlin">interface IServiceAggregator {
+    @ServiceGroup(IViewProvider::class)
+    fun provideViewProviders(): List&lt;IViewProvider&gt; = emptyList()
+
+    @ServiceGroup(IFragmentProvider::class)
+    fun provideFragmentProviders(): List&lt;IFragmentProvider&gt; = emptyList()
+
+    @ServiceGroup(IService::class)
+    fun provideServiceEntries(): List&lt;ServiceEntry&lt;IService&gt;&gt; = emptyList()
+}
+</code></pre>
+<p>返回类型决定生成模式：
+- <code>List&lt;X&gt;</code> → eager，直接实例化所有实现类
+- <code>List&lt;ServiceEntry&lt;X&gt;&gt;</code> → lazy，按需实例化</p>
+<h4 id="serviceaggregatorholder">运行时使用（ServiceAggregatorHolder）</h4>
+<pre><code class="language-kotlin">import com.webull.core.framework.service.ServiceAggregatorHolder
+
+// 获取聚合器列表
+val aggregators = ServiceAggregatorHolder.aggregators
+
+// 按 key 查找 ViewProvider
+val provider = aggregators
+    .flatMap { it.provideViewProviders() }
+    .firstOrNull { it.key == &quot;market_banner&quot; }
+
+// 按 key 查找 FragmentProvider
+val fragment = aggregators
+    .flatMap { it.provideFragmentProviders() }
+    .firstOrNull { it.key == &quot;ticker_news&quot; }
+    ?.createFragment()
+
+// 按类型查找 IService（lazy 模式，只实例化匹配的那一个）
+val bondService = aggregators
+    .flatMap { it.provideServiceEntries() }
+    .firstOrNull { it.isType(IBondService::class.java) }
+    ?.instance as? IBondService
+</code></pre>
+<h4 id="ksp_1">KSP 生成产物示例</h4>
+<pre><code class="language-kotlin">// Generated: MarketModule_ServiceAggregator.kt
+package com.webull.service
+
+class MarketModule_ServiceAggregator : IServiceAggregator {
+
+    override fun provideViewProviders(): List&lt;IViewProvider&gt; = listOf(
+        MarketBannerViewProvider,           // priority=200, object
+        AlertCardViewProvider(),            // priority=100
+        HotSearchRankingCardViewProvider()  // priority=0
+    )
+
+    override fun provideFragmentProviders(): List&lt;IFragmentProvider&gt; = listOf(
+        MarketHomeFragmentProvider(),
+        TickerNewsFragmentProvider()
+    )
+
+    override fun provideServiceEntries(): List&lt;ServiceEntry&lt;IService&gt;&gt; = listOf(
+        ServiceEntry(BondService::class.java) { BondService() },
+        ServiceEntry(RankService::class.java) { RankService() }
+    )
+}
+</code></pre>
+<p>SPI 注册文件：<code>META-INF/services/com.webull.core.framework.service.IServiceAggregator</code></p>
+<h4 id="_21">迁移步骤</h4>
+<pre><code>@ServiceRegistry(IViewProvider::class)  →  @ServiceRegistry(IViewProvider::class)
+@AutoService(IService::class)       →  @ServiceRegistry(IService::class)
+</code></pre>
+<p>迁移期间 <code>AppViewProvider</code> 已内置 fallback：聚合器优先，无注册时回退到 <code>ServiceLoader</code>。</p>
+<h4 id="service">扩展新 service 类型</h4>
+<p>只需两步，Processor 无需改动：</p>
+<ol>
+<li>在 <code>IServiceAggregator</code> 接口新增方法（通过返回类型决定 eager/lazy）</li>
+<li>业务模块实现类加 <code>@ServiceRegistry(NewInterface::class)</code></li>
+</ol>
+<h4 id="_22">设计文档</h4>
+<p>详见 <a href="migration-ksp/features/ksp-service-aggregator-design.md">migration-ksp/features/ksp-service-aggregator-design.md</a></p>
+<h3 id="abtest-key-abtestkeys">功能十：ABTest Key 自动收集（@ABTestKeys）</h3>
+<p>编译时自动收集 ABTest Key 类中的所有 String 属性，生成 <code>getAllAbKeys()</code> 函数。可选生成 <code>AbTestProvider</code> 实现类并自动注册到 ServiceAggregator。</p>
+<h4 id="_23">核心注解</h4>
+<table>
+<thead>
+<tr>
+<th>注解</th>
+<th>作用域</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@ABTestKeys</code></td>
+<td>类/object</td>
+<td>标记 ABTest Key 定义类，触发 key 收集</td>
+</tr>
+<tr>
+<td><code>@ABTestKeyExclude</code></td>
+<td>字段/属性</td>
+<td>排除该属性，不参与收集</td>
+</tr>
+</tbody>
+</table>
+<h4 id="abtestkeys">@ABTestKeys 参数</h4>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generateProvider</code></td>
+<td><code>Boolean</code></td>
+<td><code>false</code></td>
+<td>是否额外生成 AbTestProvider 实现类并注册到 ServiceAggregator</td>
+</tr>
+</tbody>
+</table>
+<h4 id="_24">基本用法</h4>
+<pre><code class="language-kotlin">import wb.bean.ABTestKeys
+import wb.bean.ABTestKeyExclude
+
+@ABTestKeys(generateProvider = true)
+object TradeCommonABTestKey : Serializable {
+    /** 启用新下单流程 */
+    val KEY_ENABLE_NEW_ORDER: String = &quot;key_enable_new_order&quot;
+
+    /** 启用期权新 UI */
+    val KEY_ENABLE_OPTION_UI: String = &quot;key_enable_option_ui&quot;
+
+    @ABTestKeyExclude  // 内部使用，不注册到 ABTest 平台
+    val KEY_DEBUG_MODE: String = &quot;key_debug_mode&quot;
+}
+</code></pre>
+<h4 id="_25">生成产物</h4>
+<p><strong>1. getAllAbKeys 函数</strong>（始终生成）：</p>
+<pre><code class="language-kotlin">// Generated: TradeCommonABTestKey_AbKeys.kt
+fun TradeCommonABTestKey_getAllAbKeys(): List&lt;String&gt; = listOf(
+    TradeCommonABTestKey.KEY_ENABLE_NEW_ORDER, // 启用新下单流程
+    TradeCommonABTestKey.KEY_ENABLE_OPTION_UI  // 启用期权新 UI
+)
+</code></pre>
+<p><strong>2. AbTestProvider 实现类</strong>（<code>generateProvider = true</code> 时生成）：</p>
+<pre><code class="language-kotlin">// Generated: TradeCommonABTestKey_AbTestProvider.kt
+class TradeCommonABTestKey_AbTestProvider : AbTestProvider {
+    override fun keys(): List&lt;String&gt; = TradeCommonABTestKey_getAllAbKeys()
+}
+</code></pre>
+<p>Provider 自动注册到模块的 <code>ServiceAggregator</code>，运行时通过 <code>ServiceAggregatorHolder</code> 统一收集所有模块的 ABTest Key。</p>
+<h4 id="_26">支持的类型</h4>
+<ul>
+<li>Kotlin <code>object</code>（推荐）</li>
+<li>Kotlin <code>class</code></li>
+<li>Java <code>class</code>（public static final String 字段）</li>
+</ul>
+<h4 id="_27">收集规则</h4>
+<ul>
+<li>收集所有 <code>String</code> 类型的 public 属性/字段</li>
+<li>排除 <code>@ABTestKeyExclude</code> 标注的属性</li>
+<li>排除 <code>private</code> 修饰的属性</li>
+<li>属性的 KDoc 注释会作为行内注释保留在生成代码中</li>
+</ul>
+<h4 id="_28">生成文件</h4>
+<ul>
+<li><code>{ClassName}_AbKeys.kt</code> — getAllAbKeys 函数</li>
+<li><code>{ClassName}_AbTestProvider.kt</code> — Provider 实现类（仅 <code>generateProvider = true</code>）</li>
+<li>位置：<code>build/generated/ksp/{variant}/kotlin/{package}/</code></li>
+</ul>
+<hr />
+<h2 id="kapt">与旧 KAPT 实现的差异</h2>
+<p>详见 <a href="migration-ksp/problem/ksp与kapt的差异点.md">migration-ksp/problem/ksp与kapt的差异点.md</a></p>
+<p>关键差异：
+- <strong>输出语言</strong>：wb-ksp 生成 Kotlin 代码（KAPT 生成 Java）
+- <strong>MarketViewRouteFactory</strong>：KSP 版本使用 Map + lambda 替代 switch-case，新增 <code>createViewById</code> 方法
+- <strong>TradeInterfaceFactory</strong>：KSP 版本使用 Kotlin <code>when</code> 替代 Java <code>switch</code>
+- <strong>Launcher 字段赋值</strong>：KSP 使用 setter 方法，KAPT 使用直接字段赋值</p>
+<hr />
+<h2 id="_29">目录说明</h2>
+<h3 id="migration-ksp">migration-ksp/（迁移知识库）</h3>
+<pre><code>migration-ksp/
+├── KAPT-TO-KSP-MIGRATION.md      # 迁移技术文档（API 映射、难点、步骤）
+├── LAUNCHER-BUSINESS-SPEC.md      # 业务功能完整规格文档
+├── context/                       # 迁移上下文资料
+├── features/                      # 功能实现记录
+├── migration/                     # 迁移过程记录
+├── problem/                       # 问题记录
+│   └── ksp与kapt的差异点.md        # KSP vs KAPT 生成代码对比报告
+└── product/                       # 产出物
+</code></pre>
+<hr />
+<h2 id="_30">开发指南</h2>
+<h3 id="_31">新增注解处理功能</h3>
+<ol>
+<li>在 <code>launcher-joke</code> 中定义注解</li>
+<li>选择处理器：</li>
+<li>基础能力（所有模块通用）→ <code>launcher-compiler-ksp</code></li>
+<li>业务能力（特定模块）→ <code>launcher-compiler-wb-ksp</code></li>
+<li>实现处理逻辑：</li>
+<li><code>launcher-compiler-ksp</code>：直接在 <code>LauncherKspProcessor.processTarget()</code> 中添加</li>
+<li><code>launcher-compiler-wb-ksp</code>：新建 <code>XxxGeneration</code> 类实现 <code>BaseGeneration</code>，注册到 <code>WbKspProcessor.generations</code></li>
+<li>使用 <code>KspUtils.kt</code> 中的公共工具：</li>
+<li><code>findAnnotation()</code> / <code>getAnnotation()</code> — 类型安全的注解查找（禁止 <code>shortName</code> 字符串匹配）</li>
+<li><code>arg&lt;T&gt;(name)</code> — 注解参数读取</li>
+<li><code>toClassName()</code> — KSClassDeclaration → KotlinPoet ClassName</li>
+<li><code>JVM_STATIC</code> / <code>JVM_FIELD</code> — 公共 AnnotationSpec 常量</li>
+</ol>
+<h3 id="_32">调试</h3>
+<pre><code class="language-bash"># 查看 KSP 生成的代码
+find . -path &quot;*/build/generated/ksp/stocksDebug*&quot; -name &quot;*.java&quot; -o -name &quot;*.kt&quot;
+
+# 清理重新生成
+./gradlew :MainApp:kspStocksDebugKotlin --rerun-tasks
+</code></pre>
+<h3 id="_33">注意事项</h3>
+<ul>
+<li><code>launcher-joke</code> 是注解定义包，<strong>禁止在其中添加处理逻辑</strong></li>
+<li>KSP 处理器中 <code>Dependencies(aggregating = false, ...)</code> 用于单文件对单文件的生成</li>
+<li>KSP 处理器中 <code>Dependencies(aggregating = true, ...)</code> 用于多文件聚合生成（如 FunctionFactory）</li>
+<li>生成 Java 文件时必须指定 <code>extensionName = "java"</code></li>
+<li><strong>禁止硬编码类名字符串</strong>：launcher-joke 中的类必须通过 <code>Xxx::class.qualifiedName!!</code> 引用，注解属性名必须通过 <code>Xxx::propertyName.name</code> 引用</li>
+<li>注解查找必须使用 <code>findAnnotation()</code> / <code>getAnnotation()</code>（全限定名匹配），<strong>禁止 <code>shortName.asString() == "Xxx"</code> 模式</strong></li>
+</ul>
+<hr />
+<h2 id="_34">特别注意：硬编码类名</h2>
+<p>以下类名在 <code>launcher-compiler-wb-ksp</code> 中以字符串形式引用，因为它们<strong>不在 compiler 的 classpath 中</strong>（定义在 CommonModule / CoreModule 的 aar 中）。如果这些类发生重命名或移动包路径，需要同步修改对应的字符串常量。</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>硬编码字符串</th>
+<th>引用的类</th>
+<th>所在模块</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ABTestKeysGeneration.kt</code></td>
+<td><code>"com.webull.commonmodule.abtest"</code> + <code>"AbTestProvider"</code></td>
+<td><code>AbTestProvider</code> 接口</td>
+<td>CommonModule</td>
+</tr>
+<tr>
+<td><code>ServiceAggregatorGeneration.kt</code></td>
+<td><code>"com.webull.core.framework.service.IServiceAggregator"</code></td>
+<td><code>IServiceAggregator</code> 接口</td>
+<td>CoreModule</td>
+</tr>
+<tr>
+<td><code>TradeInterfaceGeneration.kt</code></td>
+<td><code>"com.webull.commonmodule.trade.service.trade.base"</code> + <code>"ITradeInterface"</code></td>
+<td><code>ITradeInterface</code> 接口</td>
+<td>CommonModule</td>
+</tr>
+<tr>
+<td><code>TradeInterfaceGeneration.kt</code></td>
+<td><code>"com.webull.commonmodule.trade.service.trade.base"</code> + <code>"ITradeInterfaceFactory"</code></td>
+<td><code>ITradeInterfaceFactory</code> 接口</td>
+<td>CommonModule</td>
+</tr>
+</tbody>
+</table>
+<p><strong>为什么无法改为类引用？</strong></p>
+<p><code>launcher-compiler-wb-ksp</code> 的 <code>build.gradle</code> 只依赖 <code>launcher-joke</code>：</p>
+<pre><code class="language-groovy">dependencies {
+    implementation project(':launcher-joke')
+    // CommonModule / CoreModule 不在 compiler 的 classpath 中
+}
+</code></pre>
+<p>这些类定义在运行时模块（CommonModule / CoreModule）中，而 KSP 处理器是编译时工具，不应该依赖运行时模块。因此只能通过字符串引用。</p>
+<p><strong>维护建议：</strong> 如果上述类发生重命名，编译不会报错但生成代码会引用不存在的类，导致业务模块编译失败。修改时需全局搜索对应字符串。</p>
+</main>
+
+<script>
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const content = document.getElementById('content');
+  const btn = document.querySelector('.sidebar-toggle');
+  sidebar.classList.toggle('collapsed');
+  content.classList.toggle('expanded');
+  btn.classList.toggle('shifted');
+}
+
+// TOC folding: add toggle arrows and click handlers
+document.querySelectorAll('.sidebar nav li').forEach(li => {
+  const subUl = li.querySelector(':scope > ul');
+  if (subUl) {
+    const link = li.querySelector(':scope > a');
+    const arrow = document.createElement('span');
+    arrow.className = 'toc-toggle';
+    arrow.textContent = '▶';
+    link.appendChild(arrow);
+    
+    arrow.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      li.classList.toggle('closed');
+    });
+  }
+});
+
+// Smooth scroll for TOC links
+document.querySelectorAll('.sidebar nav a').forEach(link => {
+  link.addEventListener('click', function(e) {
+    const href = this.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  });
+});
+</script>
+
+</body>
+</html>

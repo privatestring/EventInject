@@ -19,6 +19,7 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
+@Repeatable
 annotation class ServiceRegistry(
     val value: KClass<*>,
     val priority: Int = 0

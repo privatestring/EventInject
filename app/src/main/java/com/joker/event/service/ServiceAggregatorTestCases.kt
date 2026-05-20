@@ -36,8 +36,13 @@ import wb.service.ServiceRegistry
  * - ServiceEntry(RankService::class.java) { RankService(context) }
  *
  * IProvider 预期生成（lazy 模式）：
- * - ServiceEntry(TickerCardProviderImpl::class.java) { TickerCardProviderImpl() }
+ * - ServiceEntry(TickerCardProviderImpl::class.java) { TickerCardProviderImpl }
  * - ServiceEntry(MarketWidgetProviderImpl::class.java) { MarketWidgetProviderImpl() }
+ *
+ * IFragmentProvider 预期生成（eager 模式，含双注册）：
+ * - MarketHomeFragmentProvider()
+ * - TickerCardProviderImpl          ← 通过 @ServiceRegistry(IFragmentProvider::class) 双注册
+ * - TickerNewsFragmentProvider()
  */
 
 // ============================================================
