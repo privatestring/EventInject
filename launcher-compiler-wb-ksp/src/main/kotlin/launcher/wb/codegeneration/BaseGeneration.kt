@@ -26,6 +26,11 @@ abstract class BaseGeneration(
     protected val logger: KSPLogger
 ) {
 
+    companion object {
+        /** KSP arg key：模块名，各 Generation 共用 */
+        const val OPTION_MODULE_NAME = "module_name"
+    }
+
     /**
      * 收集本功能关注的注解符号。
      * @return 未能处理的符号（需要延迟到下一轮），由 Processor 汇总返回给 KSP
@@ -46,7 +51,6 @@ abstract class BaseGeneration(
 
     /**
      * 工具方法：将 FileSpec 写入 KSP CodeGenerator。
-     * 如果 dependencies 的 sources 为空，记录 warning（增量编译可能失效）。
      */
     protected fun writeKotlinFile(
         fileSpec: FileSpec,
@@ -75,5 +79,27 @@ abstract class BaseGeneration(
             logger.warn("No source files found for dependencies, incremental compilation may not work correctly.")
         }
         return Dependencies(aggregating, *sourceFiles.toTypedArray())
+    }
+
+    /**
+     * 从 KSClassDeclaration 的源文件路径中提取模块名，并转为 PascalCase。
+     * 路径格式约定：.../模块名/src/main/...
+     * 例如：trade-order → TradeOrder, MarketModule → MarketModule
+     */
+    protected fun extractModuleName(classDecl: KSClassDeclaration): String? {
+        val filePath = classDecl.containingFile?.filePath ?: return null
+        val srcIndex = filePath.indexOf("/src/")
+        if (srcIndex > 0) {
+            val beforeSrc = filePath.substring(0, srcIndex)
+            val rawName = beforeSrc.substringAfterLast("/")
+            return rawName.toPascalCase()
+        }
+        return null
+    }
+
+    /** 将模块名转为 PascalCase：trade-order → TradeOrder */
+    protected fun String.toPascalCase(): String {
+        return split("-", "_")
+            .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
     }
 }

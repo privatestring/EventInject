@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.joker.annotation.EventBridge
 import com.joker.annotation.EventHandle
 import com.joker.event.databinding.ActivityMainBinding
+import com.joker.event.service.ServiceAggregatorTest
 import com.joker.event.update.TickerUpdateBean
 import com.joker.event.update.updateTickerUpdateBeanFields
 import com.mei.models.EventInjectImpl
@@ -45,6 +46,8 @@ class MainActivity : AppCompatActivity(), EventHandle {
         }
         binding.test2Post.setOnClickListener { v ->
             EventInjectImpl().postEventInject("haha://test2", Pair("xxxxx2", back))
+            // ServiceAggregator 运行时验证
+            ServiceAggregatorTest.run(this)
         }
 
 

@@ -10,6 +10,7 @@ import launcher.wb.codegeneration.AutoUpdateGeneration
 import launcher.wb.codegeneration.BaseGeneration
 import launcher.wb.codegeneration.FunctionGeneration
 import launcher.wb.codegeneration.MarketViewRouteGeneration
+import launcher.wb.codegeneration.ServiceAggregatorGeneration
 import launcher.wb.codegeneration.TradeInterfaceGeneration
 import launcher.wb.codegeneration.TradeServiceMakerGeneration
 import launcher.wb.mapper.MapperGeneration
@@ -57,6 +58,7 @@ class WbKspProcessor(
             MapperGeneration(codeGenerator, logger),
             AutoUpdateGeneration(codeGenerator, logger),
             AutoConvertGeneration(codeGenerator, logger),
+            ServiceAggregatorGeneration(codeGenerator, logger, options),
         )
     }
 

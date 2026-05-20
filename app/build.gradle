@@ -28,7 +28,7 @@ android {
         jvmTarget = '17'
     }
     ksp {
-//        arg("module_name", "TradeAccount")
+       arg("module_name", "TradeAccount")
     }
     buildTypes {
         release {

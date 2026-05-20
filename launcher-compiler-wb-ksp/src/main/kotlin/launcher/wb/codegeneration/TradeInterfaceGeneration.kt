@@ -57,7 +57,7 @@ class TradeInterfaceGeneration(
     override fun collect(resolver: Resolver): List<KSAnnotated> {
         // 优先使用 ksp arg 配置的 module_name
         if (moduleName == null) {
-            val configured = options["module_name"]
+            val configured = options[OPTION_MODULE_NAME]
             if (!configured.isNullOrEmpty()) {
                 moduleName = configured
             }
@@ -204,28 +204,6 @@ class TradeInterfaceGeneration(
                 endControlFlow()
             })
             .build()
-    }
-
-    /**
-     * 从 KSClassDeclaration 的源文件路径中提取模块名，并转为 PascalCase。
-     * 路径格式约定：.../模块名/src/main/...
-     * 例如：trade-order → TradeOrder, TradeModule → TradeModule
-     */
-    private fun extractModuleName(classDecl: KSClassDeclaration): String? {
-        val filePath = classDecl.containingFile?.filePath ?: return null
-        val srcIndex = filePath.indexOf("/src/")
-        if (srcIndex > 0) {
-            val beforeSrc = filePath.substring(0, srcIndex)
-            val rawName = beforeSrc.substringAfterLast("/")
-            return rawName.toPascalCase()
-        }
-        return null
-    }
-
-    /** 将模块名转为 PascalCase：trade-order → TradeOrder */
-    private fun String.toPascalCase(): String {
-        return split("-", "_")
-            .joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
     }
 
     companion object {
